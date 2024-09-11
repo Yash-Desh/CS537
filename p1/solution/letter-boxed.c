@@ -11,20 +11,18 @@ input (STDIN) until the board is solved, or until an invalid solution is attempt
 #include <stdbool.h>
 #include <string.h>
 
-
 // function to check if the input word does not have an invalid letter
 bool validWord(char *input_str, int *board_hash, char lastChar)
 {
-    if(lastChar != input_str[0])
+    if (lastChar != input_str[0])
     {
         printf("First letter of word does not match last letter of previous word\n");
         exit(0);
     }
 
-
-    for(int i=0; input_str[i] != '\0'; i++)
+    for (int i = 0; input_str[i] != '\0'; i++)
     {
-        if(board_hash[input_str[i]-97] != 1)
+        if (board_hash[input_str[i] - 97] != 1)
         {
             printf("Used a letter not present on the board\n");
             exit(0);
@@ -33,66 +31,113 @@ bool validWord(char *input_str, int *board_hash, char lastChar)
     return true;
 }
 
-
-
 // ###########################################################
-// If the solution is correct, print Correct\n, and exit with 
+// If the solution is correct, print Correct\n, and exit with
 // return code 0.
 // ###########################################################
-void updateInputHash (char *input, int *input_hash)
+void updateInputHash(char *input, int *input_hash)
 {
     for (int i = 0; input[i] != '\0'; i++)
     {
-        input_hash[input[i]-97]++;
+        input_hash[input[i] - 97]++;
     }
-    
 }
 
-bool checkInputHash (int *inputHash, int *boardHash)
+bool checkInputHash(int *inputHash, int *boardHash)
 {
     int correct_cnt = 0;
-    for(int i=0; i<26; i++)
+    for (int i = 0; i < 26; i++)
     {
-        if(((inputHash[i] > 0) && (boardHash[i] > 0)) || ((inputHash[i] == 0) && (boardHash[i] == 0)))
+        if (((inputHash[i] > 0) && (boardHash[i] > 0)) || ((inputHash[i] == 0) && (boardHash[i] == 0)))
         {
             correct_cnt++;
         }
     }
-    if(correct_cnt == 26)
+    if (correct_cnt == 26)
     {
         printf("Correct\n");
         return true;
     }
-    else 
+    else
     {
         return false;
     }
 }
 
-bool wordInDictionary (char *input, FILE *dictPointer)
+bool wordInDictionary(char *input)
 {
-    // dictPointer = fopen();
+
+    // create a file pointer
+    FILE *dictPointer = NULL;
+
+    // create a string to store file content
+    char str[100];
+
+    dictPointer = fopen("../dict.txt", "r");
+
+    while (fgets(str, 100, dictPointer))
+    {
+        if(strcmp(str, input))
+        {
+            fclose(dictPointer);
+            return true;
+        }
+    }
+    fclose(dictPointer);
+    printf("Word not found in dictionary\n");
+    return false;
 }
 
-int main()
+bool adjacentCheck(char *input, int *sideStartHash, char *board)
+{
+    // for each letter of input except last
+    for (int i = 0; i < sizeof(input) - 1; i++)
+    {
+        // determine position of letter in board
+        char letter = input[i];
+        int position;
+        for (int j = 0; board[j] != '\0'; j++)
+        {
+            if (board[j] == input[i])
+            {
+                position = j;
+                printf("board position of %c is %d\n", letter, position);
+                printf("start of side for %c is %d\n", letter, sideStartHash[position]);
+                break;
+            }
+        }
+
+        // traverse the side of the board match next letter
+        int startPosition = sideStartHash[position];
+        for (int k = sideStartHash[position]; (sideStartHash[k] == sideStartHash[position]); k++)
+        {
+            printf("Entered loop for %c\n", letter);
+            if (input[i + 1] == board[k])
+            {
+                printf("Same-side letter used consecutively\n");
+                return true;
+            }
+        }
+        printf("%c\n", letter);
+    }
+    return false;
+}
+
+int main(int argc, char **argv)
 {
     char board[26];
 
-    // create a hashmap of the board
+    // hashmap of the board letters
     int board_hash[26] = {0};
 
-    // create a hashmap of the user input
+    // hashmap of the user input
     int input_hash[26] = {0};
 
-    // hashes that store the start & end of the side
+    // hashes that store the start
     int sideStartHash[26] = {0};
-    int sideEndHash[26] = {0};
 
-    // variables that store the position of the start 
-    // & end of the side w.r.t board
-    int startOfSide = 0, endOfSide = 0;
-
-    
+    // variables that store the position of the start of the side w.r.t board
+    int startOfSide = 0;
 
     // counter to count number of sides
     int sides_cnt = 0;
@@ -113,7 +158,11 @@ int main()
         // counting the number of sides
         if (ch == '\n')
         {
+            // increment side_cnt on new line character
             sides_cnt++;
+
+            // increment start of board-side variable
+            startOfSide = char_cnt;
         }
         // counting only the letters
         // storing the board as a single string
@@ -123,9 +172,12 @@ int main()
             char_cnt++;
 
             // append ch to board
-            board[char_cnt-1] = ch;
+            board[char_cnt - 1] = ch;
+
+            // update sideStartHash
+            sideStartHash[char_cnt - 1] = startOfSide;
         }
-            
+
         printf("%c", ch);
 
         // ###################################################################
@@ -144,8 +196,6 @@ int main()
             // updating the hash table
             board_hash[ch - 97]++;
         }
-
-        
     }
 
     // Add null terminator to the board string
@@ -154,10 +204,15 @@ int main()
 
     for (int i = 0; i < 26; i++)
     {
-        printf("%d\n", board_hash[i]);
+        printf("%d", board_hash[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < 26; i++)
+    {
+        printf("%d", sideStartHash[i]);
     }
 
-    printf("number of characters in board %d\n", char_cnt);
+    printf("\nnumber of characters in board %d\n", char_cnt);
     printf("sides = %d\n", sides_cnt);
 
     // ###################################################################
@@ -176,7 +231,6 @@ int main()
     // char *input = (char *)malloc(char_cnt * sizeof(char));
     char input[500];
 
-
     // Variables to store first & last letter
     char last_letter;
     int input_size;
@@ -184,48 +238,51 @@ int main()
     printf("Enter input word : ");
     gets(input);
 
-    last_letter = input[0];    // Initialize last letter = first letter for the 1st input
+    last_letter = input[0]; // Initialize last letter = first letter for the 1st input
     // printf("size of input %d\n", input_size);
     // printf("last letter %c\n", last_letter);
-
 
     // #####################################################################
     // If the solution uses a letter not present on the board, print Used a
     // letter not present on the board\n and exit with return code 0.
     // #####################################################################
 
-
     // #####################################################################
-    // If the first character of a word in the solution is not the same as 
-    // the last character in the preceding word, print First letter of word 
+    // If the first character of a word in the solution is not the same as
+    // the last character in the preceding word, print First letter of word
     // does not match last letter of previous word\n and exit with return code 0.
     // #####################################################################
 
-    while(validWord(input, board_hash, last_letter))
+    while (validWord(input, board_hash, last_letter))
     {
         // call function to update a hash map of the user inputs
         updateInputHash(input, input_hash);
 
         // check if the hash map has matched
-        if(checkInputHash(input_hash, board_hash))
+        if (checkInputHash(input_hash, board_hash))
         {
             return 0;
         }
 
-        // // call function to check if word is in dictionary
-        // if(!wordInDictionary())
-        // {
-        //     return 0;
-        // }
-    
+        // check for adjacent letter
+        if (adjacentCheck(input, sideStartHash, board))
+        {
+            return 0;
+        }
+
+        // call function to check if word is in dictionary
+        if(!wordInDictionary(input))
+        {
+            printf("\n\nEntered dictionary function\n\n");
+            return 0;
+        }
+
         input_size = strlen(input);
-        last_letter = input[input_size-1];
+        last_letter = input[input_size - 1];
         printf("Enter input word : ");
         gets(input);
         // validWord(input, board_hash);
-
-        
     }
-
+    fclose(board_ptr);
     return 0;
 }
