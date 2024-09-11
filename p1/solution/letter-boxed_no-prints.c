@@ -64,6 +64,7 @@ bool checkInputHash(int *inputHash, int *boardHash)
     }
 }
 
+// returns true if the word matches & false if it isn't found
 bool wordInDictionary(char *input)
 {
 
@@ -74,11 +75,14 @@ bool wordInDictionary(char *input)
     char str[100];
 
     dictPointer = fopen("../dict.txt", "r");
-    int wordcnt =0;
+    // int wordcnt =0;
     while (fgets(str, 100, dictPointer))
     {
-        wordcnt++;
-        printf("%d\n", wordcnt);
+        // to remove the \n newline character
+        int wordLen = strlen(str);
+        str[strlen(str)-1] = '\0';
+        
+
         if(strcmp(input, str) == 0)
         {
             // fclose(dictPointer);
@@ -275,11 +279,11 @@ int main(int argc, char **argv)
         }
 
         // call function to check if word is in dictionary
-        // if(!wordInDictionary(input))
-        // {
-        //     printf("\n\nEntered dictionary function\n\n");
-        //     return 0;
-        // }
+        if(!wordInDictionary(input))
+        {
+            printf("\n\nEntered dictionary function\n\n");
+            return 0;
+        }
 
         input_size = strlen(input);
         last_letter = input[input_size - 1];

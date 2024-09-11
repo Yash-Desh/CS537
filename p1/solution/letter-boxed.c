@@ -64,7 +64,7 @@ bool checkInputHash(int *inputHash, int *boardHash)
     }
 }
 
-bool wordInDictionary(char *input)
+bool wordInDictionary(char *input, char *dict)
 {
 
     // create a file pointer
@@ -73,17 +73,24 @@ bool wordInDictionary(char *input)
     // create a string to store file content
     char str[100];
 
-    dictPointer = fopen("../dict.txt", "r");
-
+    dictPointer = fopen(dict, "r");
+    // int wordcnt =0;
     while (fgets(str, 100, dictPointer))
     {
-        if(strcmp(str, input))
+        // to remove the \n newline character
+        
+        str[strlen(str)-1] = '\0';
+        
+
+        if(strcmp(input, str) == 0)
         {
-            fclose(dictPointer);
+            // fclose(dictPointer);
+            // printf("found word\n");
             return true;
         }
+        
     }
-    fclose(dictPointer);
+    // fclose(dictPointer);
     printf("Word not found in dictionary\n");
     return false;
 }
@@ -91,40 +98,47 @@ bool wordInDictionary(char *input)
 bool adjacentCheck(char *input, int *sideStartHash, char *board)
 {
     // for each letter of input except last
-    for (int i = 0; i < sizeof(input) - 1; i++)
+    for (long unsigned int i = 0; i < sizeof(input) - 1; i++)
     {
         // determine position of letter in board
-        char letter = input[i];
-        int position;
+        // char letter = input[i];
+        int position = 0;
         for (int j = 0; board[j] != '\0'; j++)
         {
             if (board[j] == input[i])
             {
                 position = j;
-                printf("board position of %c is %d\n", letter, position);
-                printf("start of side for %c is %d\n", letter, sideStartHash[position]);
+                // printf("board position of %c is %d\n", letter, position);
+                // printf("start of side for %c is %d\n", letter, sideStartHash[position]);
                 break;
             }
         }
 
         // traverse the side of the board match next letter
-        int startPosition = sideStartHash[position];
+        // int startPosition = sideStartHash[position];
         for (int k = sideStartHash[position]; (sideStartHash[k] == sideStartHash[position]); k++)
         {
-            printf("Entered loop for %c\n", letter);
+            // printf("Entered loop for %c\n", letter);
             if (input[i + 1] == board[k])
             {
                 printf("Same-side letter used consecutively\n");
                 return true;
             }
         }
-        printf("%c\n", letter);
+        // printf("%c\n", letter);
     }
     return false;
 }
 
 int main(int argc, char **argv)
 {
+    // check whether the dictionary & board are given as input
+    if(argc != 3)
+    {
+        printf("Files not provided\n");
+        return 1;
+    }
+
     char board[26];
 
     // hashmap of the board letters
@@ -145,10 +159,19 @@ int main(int argc, char **argv)
     // total character counter
     int char_cnt = 0;
 
+    // EOF checker
+    // Return Value of scanf
+    // The scanf in C returns three types of values:
+
+    // >0: The number of values converted and assigned successfully.
+    // 0: No value was assigned.
+    // <0: Read error encountered or end-of-file(EOF) reached before any assignment was made.
+    int check_EOF = 1;
+
     // Opening the board files
     // currently hardcoded name
     FILE *board_ptr = NULL;
-    board_ptr = fopen("../tests/tests/1.board", "r");
+    board_ptr = fopen(argv[1], "r");
 
     // Reading & Printing what is written in file
     // character by character using loop.
@@ -178,7 +201,7 @@ int main(int argc, char **argv)
             sideStartHash[char_cnt - 1] = startOfSide;
         }
 
-        printf("%c", ch);
+        // printf("%c", ch);
 
         // ###################################################################
         // If a board contains a letter more than once, print Invalid board\n
@@ -188,7 +211,7 @@ int main(int argc, char **argv)
         // check if alphabets are repeated
         if (ch != '\n' && board_hash[ch - 97] >= 1)
         {
-            printf("Invalid board_1\n");
+            printf("Invalid board\n");
             return 1;
         }
         else
@@ -200,20 +223,20 @@ int main(int argc, char **argv)
 
     // Add null terminator to the board string
     board[char_cnt] = '\0';
-    printf("board is %s\n", board);
+    // printf("board is %s\n", board);
 
-    for (int i = 0; i < 26; i++)
-    {
-        printf("%d", board_hash[i]);
-    }
-    printf("\n");
-    for (int i = 0; i < 26; i++)
-    {
-        printf("%d", sideStartHash[i]);
-    }
+    // for (int i = 0; i < 26; i++)
+    // {
+    //     printf("%d", board_hash[i]);
+    // }
+    // printf("\n");
+    // for (int i = 0; i < 26; i++)
+    // {
+    //     printf("%d", sideStartHash[i]);
+    // }
 
-    printf("\nnumber of characters in board %d\n", char_cnt);
-    printf("sides = %d\n", sides_cnt);
+    // printf("\nnumber of characters in board %d\n", char_cnt);
+    // printf("sides = %d\n", sides_cnt);
 
     // ###################################################################
     // If the board is invalid (less than 3 sides), print Invalid board\n
@@ -221,7 +244,7 @@ int main(int argc, char **argv)
     // ###################################################################
     if (sides_cnt < 3)
     {
-        printf("Invalid board_2\n");
+        printf("Invalid board\n");
         return 1;
     }
 
@@ -235,8 +258,12 @@ int main(int argc, char **argv)
     char last_letter;
     int input_size;
 
-    printf("Enter input word : ");
-    gets(input);
+    // printf("Enter input word : ");
+    check_EOF = scanf("%s", input);
+    if(check_EOF <= 0)
+    {
+        exit(1);
+    }
 
     last_letter = input[0]; // Initialize last letter = first letter for the 1st input
     // printf("size of input %d\n", input_size);
@@ -271,16 +298,20 @@ int main(int argc, char **argv)
         }
 
         // call function to check if word is in dictionary
-        if(!wordInDictionary(input))
+        if(!wordInDictionary(input, argv[2]))
         {
-            printf("\n\nEntered dictionary function\n\n");
+            // printf("\n\nEntered dictionary function\n\n");
             return 0;
         }
 
         input_size = strlen(input);
         last_letter = input[input_size - 1];
-        printf("Enter input word : ");
-        gets(input);
+        // printf("Enter input word : ");
+        check_EOF = scanf("%s", input);
+        if(check_EOF <= 0)
+        {
+            exit(1);
+        }
         // validWord(input, board_hash);
     }
     fclose(board_ptr);
