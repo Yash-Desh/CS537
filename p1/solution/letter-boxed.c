@@ -72,7 +72,7 @@ bool wordInDictionary(char *input, char *dict)
     FILE *dictPointer = NULL;
 
     // create a string to store file content
-    char str[100];
+    char str[500];
 
     dictPointer = fopen(dict, "r");
 
