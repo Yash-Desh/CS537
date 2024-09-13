@@ -14,12 +14,6 @@ input (STDIN) until the board is solved, or until an invalid solution is attempt
 // function to check if the input word does not have an invalid letter
 bool validWord(char *input_str, int *board_hash, char lastChar)
 {
-    if (lastChar != input_str[0])
-    {
-        printf("First letter of word does not match last letter of previous word\n");
-        exit(0);
-    }
-
     for (int i = 0; input_str[i] != '\0'; i++)
     {
         if (board_hash[input_str[i] - 97] != 1)
@@ -28,6 +22,13 @@ bool validWord(char *input_str, int *board_hash, char lastChar)
             exit(0);
         }
     }
+
+    if (lastChar != input_str[0])
+    {
+        printf("First letter of word does not match last letter of previous word\n");
+        exit(0);
+    }
+
     return true;
 }
 
@@ -74,6 +75,13 @@ bool wordInDictionary(char *input, char *dict)
     char str[100];
 
     dictPointer = fopen(dict, "r");
+
+    // checking if the file is opened successfully
+    if (dictPointer == NULL) 
+    {
+        exit(1);
+    }
+
     // int wordcnt =0;
     while (fgets(str, 100, dictPointer))
     {
@@ -84,13 +92,13 @@ bool wordInDictionary(char *input, char *dict)
 
         if(strcmp(input, str) == 0)
         {
-            // fclose(dictPointer);
+            fclose(dictPointer);
             // printf("found word\n");
             return true;
         }
         
     }
-    // fclose(dictPointer);
+    fclose(dictPointer);
     printf("Word not found in dictionary\n");
     return false;
 }
@@ -135,7 +143,7 @@ int main(int argc, char **argv)
     // check whether the dictionary & board are given as input
     if(argc != 3)
     {
-        printf("Files not provided\n");
+        // printf("Files not provided\n");
         return 1;
     }
 
@@ -173,13 +181,19 @@ int main(int argc, char **argv)
     FILE *board_ptr = NULL;
     board_ptr = fopen(argv[1], "r");
 
+    if (board_ptr == NULL) 
+    {
+        exit(1);
+    }
+
     // Reading & Printing what is written in file
     // character by character using loop.
     char ch;
+    char prevChar = '0';
     while ((ch = fgetc(board_ptr)) != EOF)
     {
         // counting the number of sides
-        if (ch == '\n')
+        if (ch == '\n' && prevChar != '\n')
         {
             // increment side_cnt on new line character
             sides_cnt++;
@@ -219,24 +233,12 @@ int main(int argc, char **argv)
             // updating the hash table
             board_hash[ch - 97]++;
         }
+        prevChar = ch;
     }
 
     // Add null terminator to the board string
     board[char_cnt] = '\0';
-    // printf("board is %s\n", board);
-
-    // for (int i = 0; i < 26; i++)
-    // {
-    //     printf("%d", board_hash[i]);
-    // }
-    // printf("\n");
-    // for (int i = 0; i < 26; i++)
-    // {
-    //     printf("%d", sideStartHash[i]);
-    // }
-
-    // printf("\nnumber of characters in board %d\n", char_cnt);
-    // printf("sides = %d\n", sides_cnt);
+    
 
     // ###################################################################
     // If the board is invalid (less than 3 sides), print Invalid board\n
