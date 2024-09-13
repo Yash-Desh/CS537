@@ -309,8 +309,13 @@ int main(int argc, char **argv)
 
     // printf("Enter something : ");
     nread = getline(&input, &len, stdin);
+    while((input[0] == '\n' || input[0] == ' ') && (nread != -1))
+    {
+        nread = getline(&input, &len, stdin);
+        // printf("Empty Input\n");
+    }
     
-    if(nread == -1 || input[0] == '\n' || input[0] == ' ')
+    if(nread == -1)
     {
         printf("Not all letters used\n");
         exit(0);
@@ -369,8 +374,14 @@ int main(int argc, char **argv)
         last_letter = input[input_size - 1];
         // printf("Enter input word : ");
         nread = getline(&input, &len, stdin);
+
+        while((input[0] == '\n' || input[0] == ' ') && (nread != -1))
+        {
+            nread = getline(&input, &len, stdin);
+            // printf("Empty Input 2\n");
+        }
         
-        if(nread == -1 || input[0] == '\n' || input[0] == ' ')
+        if(nread == -1 )
         {
             printf("Not all letters used\n");
             exit(0);
