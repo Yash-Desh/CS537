@@ -264,7 +264,8 @@ int main(int argc, char **argv)
     check_EOF = scanf("%s", input);
     if(check_EOF <= 0)
     {
-        exit(1);
+        printf("Not all letters used\n");
+        exit(0);
     }
 
     last_letter = input[0]; // Initialize last letter = first letter for the 1st input
@@ -312,7 +313,8 @@ int main(int argc, char **argv)
         check_EOF = scanf("%s", input);
         if(check_EOF <= 0)
         {
-            exit(1);
+            printf("Not all letters used\n");
+            exit(0);
         }
         // validWord(input, board_hash);
     }
