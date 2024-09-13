@@ -7,7 +7,7 @@ Campus ID: 9087158664
 ## Status : Working
 ## Functions 
 
-validWord() checks whether 
+Function `validWord()` checks whether 
 1. last character of old word matches with first character of new word
 2. Checks if each letter of input is present on the board
 
