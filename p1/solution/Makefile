@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS-common = -std=c17 -Wall -Wextra -Werror -pedantic
+CFLAGS-common = -std=gnu17 -Wall -Wextra -Werror -pedantic
 CFLAGS = $(CFLAGS-common) -O2
 CFLAGS-dbg = $(CFLAGS-common) -Og -g
 TARGET = letter-boxed
