@@ -19,6 +19,7 @@
 00003953 getpid
 00000a20 pipe1
 00002b70 iref
+00003973 getparentname
 00003c60 malloc
 00003963 sleep
 00000200 exitiputtest

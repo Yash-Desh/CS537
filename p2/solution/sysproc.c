@@ -42,6 +42,41 @@ sys_getpid(void)
   return myproc()->pid;
 }
 
+// our new system call handler function
+int
+sys_getparentname(void)
+{
+  int pbuff;
+  int cbuff;
+  if(argint(2, &pbuff)<0 || argint(3, &cbuff)<0)
+  {
+    return -1;
+  }
+
+  if(pbuff<=0 || cbuff<=0)
+  {
+     return -1;
+  }
+
+  char *p;
+  char *c;
+  if(argstr(0, &p) < 0 || argstr(1, &c) < 0)
+  {
+    return -1;
+  }
+
+  if(p==(char*)0 || c == (char*)0)
+  {
+    return -1;
+  }
+
+  int size_p = strlen(myproc()->parent->name);
+  safestrcpy(p, myproc()->parent->name, size_p+1);
+  int size_c = strlen(myproc()->name);
+  safestrcpy(c, myproc()->name, size_c+1);
+  return 1;
+}
+
 int
 sys_sbrk(void)
 {

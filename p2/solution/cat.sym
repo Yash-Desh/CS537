@@ -13,6 +13,7 @@
 00000230 gets
 000003e3 getpid
 00000090 cat
+00000403 getparentname
 000006f0 malloc
 000003f3 sleep
 00000373 pipe

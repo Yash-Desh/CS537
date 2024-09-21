@@ -17,6 +17,7 @@
 000008b0 parsepipe
 00000b60 parsecmd
 00000440 backcmd
+00000ec3 getparentname
 000005d0 peek
 00000650 parseredirs
 00000470 gettoken

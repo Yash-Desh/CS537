@@ -78,6 +78,8 @@ allocproc(void)
 
   acquire(&ptable.lock);
 
+  // find an empty slot on the process table to create
+  // a proc struct for the calling process
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;

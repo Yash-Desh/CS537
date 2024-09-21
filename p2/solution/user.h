@@ -1,6 +1,13 @@
 struct stat;
 struct rtcdate;
 
+/*
+user.h contains a list of system calls and userspace functions (defined in ulib.c) available to you, while in userspace. 
+It is important to remember that these functions can't be used in kernelspace and it is left as an exercise for you to 
+figure out what helper functions are necessary(if any) in the kernel for successful completion of this project.
+
+*/
+
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
@@ -17,12 +24,17 @@ int unlink(const char*);
 int fstat(int fd, struct stat*);
 int link(const char*, const char*);
 int mkdir(const char*);
+//
 int chdir(const char*);
 int dup(int);
+// 
 int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+// getparentname userlevel system call definition
+int getparentname(char* parentbuf,char* childbuf, int parentbufsize, int childbufsize);
+
 
 // ulib.c
 int stat(const char*, struct stat*);

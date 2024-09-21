@@ -49,6 +49,10 @@ fetchstr(uint addr, char **pp)
 int
 argint(int n, int *ip)
 {
+  // esp is only a pointer to the stack pointer
+  // the trapframe stores the the stack pointer in esp
+  // the stack pointer points to user stack
+  // fetchint actually fetches parameters from the user stack
   return fetchint((myproc()->tf->esp) + 4 + 4*n, ip);
 }
 
@@ -103,6 +107,7 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_getparentname(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,7 +131,11 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_getparentname] sys_getparentname,
 };
+
+// called on syscall trap. checks that the syscall number (passed via eax)
+// is valid & then calls the appropriate handler for the syscall
 
 void
 syscall(void)

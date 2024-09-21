@@ -13,6 +13,7 @@
 0000060b mknod
 00000490 gets
 00000643 getpid
+00000663 getparentname
 000001d0 grep
 00000950 malloc
 00000653 sleep

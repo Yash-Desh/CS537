@@ -36,10 +36,12 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  // if it is a system call do the following
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
       exit();
     myproc()->tf = tf;
+    // THIS IS WHAT ACTUALLY CALLS THE SYSCALL
     syscall();
     if(myproc()->killed)
       exit();

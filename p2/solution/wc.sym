@@ -12,6 +12,7 @@
 0000041b mknod
 000002a0 gets
 00000453 getpid
+00000473 getparentname
 00000760 malloc
 00000463 sleep
 000003e3 pipe
