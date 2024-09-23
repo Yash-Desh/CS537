@@ -179,11 +179,13 @@ UPROGS=\
 	_test_1\
 	_test_2\
 	_test_3\
+	_test_4\
 	_mkdir\
 	_rm\
 	_sh\
 	_stressfs\
 	_usertests\
+	_verylargeparentname\
 	_wc\
 	_zombie\
 

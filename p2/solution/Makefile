@@ -181,6 +181,7 @@ UPROGS=\
 	_sh\
 	_stressfs\
 	_usertests\
+	_verylargeparentname\
 	_wc\
 	_zombie\
 

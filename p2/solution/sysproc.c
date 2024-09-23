@@ -46,33 +46,57 @@ sys_getpid(void)
 int
 sys_getparentname(void)
 {
+  // variables to store parameters parentbuffsize & childbufsize 
+  // passed as arguments to the system call
   int pbuff;
   int cbuff;
+
+  // Check if these arguments are present & within allocated address
+  // space
   if(argint(2, &pbuff)<0 || argint(3, &cbuff)<0)
   {
     return -1;
   }
 
+  // parentbuffsize or childbufsize is less than or equal to zero
   if(pbuff<=0 || cbuff<=0)
   {
      return -1;
   }
 
+  // variables to store parameters parentbuff & childbuff
+  // passed as arguments to the system call
   char *p;
   char *c;
+
+
+  // check if childbuff & parentbuff are present & within allocated 
+  // address space
   if(argstr(0, &p) < 0 || argstr(1, &c) < 0)
   {
     return -1;
   }
 
+  // Null pointer handled
   if(p==(char*)0 || c == (char*)0)
   {
     return -1;
   }
 
+  
+  // determine length of the process names 
   int size_p = strlen(myproc()->parent->name);
-  safestrcpy(p, myproc()->parent->name, size_p+1);
   int size_c = strlen(myproc()->name);
+
+  // check if size of parentbuff & childbuff is less than process name
+
+  if(pbuff < size_p || cbuff < size_c)
+  {
+    return -1;
+  }
+
+  // copy the process names into parentbuff & childbuff
+  safestrcpy(p, myproc()->parent->name, size_p+1);
   safestrcpy(c, myproc()->name, size_c+1);
   return 1;
 }
