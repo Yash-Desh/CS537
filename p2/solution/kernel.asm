@@ -11164,7 +11164,7 @@ sys_getparentname(void)
 8010571e:	e8 fd f1 ff ff       	call   80104920 <argint>
 80105723:	83 c4 10             	add    $0x10,%esp
 80105726:	85 c0                	test   %eax,%eax
-80105728:	0f 88 ea 00 00 00    	js     80105818 <sys_getparentname+0x108>
+80105728:	0f 88 f2 00 00 00    	js     80105820 <sys_getparentname+0x110>
 8010572e:	83 ec 08             	sub    $0x8,%esp
 80105731:	8d 45 ec             	lea    -0x14(%ebp),%eax
 80105734:	50                   	push   %eax
@@ -11172,7 +11172,7 @@ sys_getparentname(void)
 80105737:	e8 e4 f1 ff ff       	call   80104920 <argint>
 8010573c:	83 c4 10             	add    $0x10,%esp
 8010573f:	85 c0                	test   %eax,%eax
-80105741:	0f 88 d1 00 00 00    	js     80105818 <sys_getparentname+0x108>
+80105741:	0f 88 d9 00 00 00    	js     80105820 <sys_getparentname+0x110>
   {
     return -1;
   }
@@ -11181,10 +11181,10 @@ sys_getparentname(void)
   if(pbuff<=0 || cbuff<=0)
 80105747:	8b 5d e8             	mov    -0x18(%ebp),%ebx
 8010574a:	85 db                	test   %ebx,%ebx
-8010574c:	0f 8e c6 00 00 00    	jle    80105818 <sys_getparentname+0x108>
+8010574c:	0f 8e ce 00 00 00    	jle    80105820 <sys_getparentname+0x110>
 80105752:	8b 4d ec             	mov    -0x14(%ebp),%ecx
 80105755:	85 c9                	test   %ecx,%ecx
-80105757:	0f 8e bb 00 00 00    	jle    80105818 <sys_getparentname+0x108>
+80105757:	0f 8e c3 00 00 00    	jle    80105820 <sys_getparentname+0x110>
   char *c;
 
 
@@ -11198,7 +11198,7 @@ sys_getparentname(void)
 80105766:	e8 75 f2 ff ff       	call   801049e0 <argstr>
 8010576b:	83 c4 10             	add    $0x10,%esp
 8010576e:	85 c0                	test   %eax,%eax
-80105770:	0f 88 a2 00 00 00    	js     80105818 <sys_getparentname+0x108>
+80105770:	0f 88 aa 00 00 00    	js     80105820 <sys_getparentname+0x110>
 80105776:	83 ec 08             	sub    $0x8,%esp
 80105779:	8d 45 f4             	lea    -0xc(%ebp),%eax
 8010577c:	50                   	push   %eax
@@ -11206,7 +11206,7 @@ sys_getparentname(void)
 8010577f:	e8 5c f2 ff ff       	call   801049e0 <argstr>
 80105784:	83 c4 10             	add    $0x10,%esp
 80105787:	85 c0                	test   %eax,%eax
-80105789:	0f 88 89 00 00 00    	js     80105818 <sys_getparentname+0x108>
+80105789:	0f 88 91 00 00 00    	js     80105820 <sys_getparentname+0x110>
   {
     return -1;
   }
@@ -11215,15 +11215,15 @@ sys_getparentname(void)
   if(p==(char*)0 || c == (char*)0)
 8010578f:	8b 55 f0             	mov    -0x10(%ebp),%edx
 80105792:	85 d2                	test   %edx,%edx
-80105794:	0f 84 7e 00 00 00    	je     80105818 <sys_getparentname+0x108>
+80105794:	0f 84 86 00 00 00    	je     80105820 <sys_getparentname+0x110>
 8010579a:	8b 45 f4             	mov    -0xc(%ebp),%eax
 8010579d:	85 c0                	test   %eax,%eax
-8010579f:	74 77                	je     80105818 <sys_getparentname+0x108>
-    return -1;
+8010579f:	74 7f                	je     80105820 <sys_getparentname+0x110>
   }
 
   
   // determine length of the process names 
+  // strlen() does not count the NULL character ‘\0’
   int size_p = strlen(myproc()->parent->name);
 801057a1:	e8 ca e1 ff ff       	call   80103970 <myproc>
 801057a6:	83 ec 0c             	sub    $0xc,%esp
@@ -11237,59 +11237,66 @@ sys_getparentname(void)
 801057bc:	83 c0 6c             	add    $0x6c,%eax
 801057bf:	89 04 24             	mov    %eax,(%esp)
 801057c2:	e8 99 f0 ff ff       	call   80104860 <strlen>
+  size_p++;
+  size_c++;
 
   // check if size of parentbuff & childbuff is less than process name
 
-  if(pbuff < size_p || cbuff < size_c)
-801057c7:	83 c4 10             	add    $0x10,%esp
-  int size_c = strlen(myproc()->name);
-801057ca:	89 c6                	mov    %eax,%esi
-  if(pbuff < size_p || cbuff < size_c)
-801057cc:	39 5d e8             	cmp    %ebx,-0x18(%ebp)
-801057cf:	7c 47                	jl     80105818 <sys_getparentname+0x108>
-801057d1:	39 45 ec             	cmp    %eax,-0x14(%ebp)
-801057d4:	7c 42                	jl     80105818 <sys_getparentname+0x108>
+  if(pbuff < size_p)
+801057c7:	8b 4d e8             	mov    -0x18(%ebp),%ecx
+  size_p++;
+801057ca:	8d 53 01             	lea    0x1(%ebx),%edx
+801057cd:	39 ca                	cmp    %ecx,%edx
+801057cf:	89 ce                	mov    %ecx,%esi
+801057d1:	0f 4e f2             	cmovle %edx,%esi
   {
-    return -1;
+    size_p = pbuff;
+  }
+
+  if(cbuff < size_c)
+801057d4:	8b 55 ec             	mov    -0x14(%ebp),%edx
+  size_c++;
+801057d7:	83 c0 01             	add    $0x1,%eax
+801057da:	39 d0                	cmp    %edx,%eax
+801057dc:	89 d3                	mov    %edx,%ebx
+801057de:	0f 4e d8             	cmovle %eax,%ebx
+  {
+    size_c = cbuff;
   }
 
   // copy the process names into parentbuff & childbuff
-  safestrcpy(p, myproc()->parent->name, size_p+1);
-801057d6:	e8 95 e1 ff ff       	call   80103970 <myproc>
-801057db:	83 c3 01             	add    $0x1,%ebx
-801057de:	83 ec 04             	sub    $0x4,%esp
-801057e1:	53                   	push   %ebx
-801057e2:	8b 40 14             	mov    0x14(%eax),%eax
-801057e5:	83 c0 6c             	add    $0x6c,%eax
-801057e8:	50                   	push   %eax
-801057e9:	ff 75 f0             	push   -0x10(%ebp)
-801057ec:	e8 2f f0 ff ff       	call   80104820 <safestrcpy>
-  safestrcpy(c, myproc()->name, size_c+1);
-801057f1:	e8 7a e1 ff ff       	call   80103970 <myproc>
-801057f6:	83 c4 0c             	add    $0xc,%esp
-801057f9:	89 c2                	mov    %eax,%edx
-801057fb:	8d 46 01             	lea    0x1(%esi),%eax
-801057fe:	50                   	push   %eax
-801057ff:	8d 42 6c             	lea    0x6c(%edx),%eax
-80105802:	50                   	push   %eax
-80105803:	ff 75 f4             	push   -0xc(%ebp)
-80105806:	e8 15 f0 ff ff       	call   80104820 <safestrcpy>
+  safestrcpy(p, myproc()->parent->name, size_p);
+801057e1:	e8 8a e1 ff ff       	call   80103970 <myproc>
+801057e6:	83 c4 0c             	add    $0xc,%esp
+801057e9:	56                   	push   %esi
+801057ea:	8b 40 14             	mov    0x14(%eax),%eax
+801057ed:	83 c0 6c             	add    $0x6c,%eax
+801057f0:	50                   	push   %eax
+801057f1:	ff 75 f0             	push   -0x10(%ebp)
+801057f4:	e8 27 f0 ff ff       	call   80104820 <safestrcpy>
+  safestrcpy(c, myproc()->name, size_c);
+801057f9:	e8 72 e1 ff ff       	call   80103970 <myproc>
+801057fe:	83 c4 0c             	add    $0xc,%esp
+80105801:	83 c0 6c             	add    $0x6c,%eax
+80105804:	53                   	push   %ebx
+80105805:	50                   	push   %eax
+80105806:	ff 75 f4             	push   -0xc(%ebp)
+80105809:	e8 12 f0 ff ff       	call   80104820 <safestrcpy>
   return 1;
-8010580b:	83 c4 10             	add    $0x10,%esp
-8010580e:	b8 01 00 00 00       	mov    $0x1,%eax
-80105813:	eb 08                	jmp    8010581d <sys_getparentname+0x10d>
-80105815:	8d 76 00             	lea    0x0(%esi),%esi
+8010580e:	83 c4 10             	add    $0x10,%esp
+80105811:	b8 01 00 00 00       	mov    $0x1,%eax
+80105816:	eb 0d                	jmp    80105825 <sys_getparentname+0x115>
+80105818:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+8010581f:	90                   	nop
     return -1;
-80105818:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+80105820:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
 }
-8010581d:	8d 65 f8             	lea    -0x8(%ebp),%esp
-80105820:	5b                   	pop    %ebx
-80105821:	5e                   	pop    %esi
-80105822:	5d                   	pop    %ebp
-80105823:	c3                   	ret    
-80105824:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
-8010582b:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
-8010582f:	90                   	nop
+80105825:	8d 65 f8             	lea    -0x8(%ebp),%esp
+80105828:	5b                   	pop    %ebx
+80105829:	5e                   	pop    %esi
+8010582a:	5d                   	pop    %ebp
+8010582b:	c3                   	ret    
+8010582c:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
 
 80105830 <sys_sbrk>:
 

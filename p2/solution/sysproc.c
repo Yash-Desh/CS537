@@ -85,19 +85,29 @@ sys_getparentname(void)
 
   
   // determine length of the process names 
+  // strlen() does not count the NULL character ‘\0’
   int size_p = strlen(myproc()->parent->name);
   int size_c = strlen(myproc()->name);
 
+  // incremented size to include '\0'
+  size_p++;
+  size_c++;
+
   // check if size of parentbuff & childbuff is less than process name
 
-  if(pbuff < size_p || cbuff < size_c)
+  if(pbuff < size_p)
   {
-    return -1;
+    size_p = pbuff;
+  }
+
+  if(cbuff < size_c)
+  {
+    size_c = cbuff;
   }
 
   // copy the process names into parentbuff & childbuff
-  safestrcpy(p, myproc()->parent->name, size_p+1);
-  safestrcpy(c, myproc()->name, size_c+1);
+  safestrcpy(p, myproc()->parent->name, size_p);
+  safestrcpy(c, myproc()->name, size_c);
   return 1;
 }
 
