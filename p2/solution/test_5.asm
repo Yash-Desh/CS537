@@ -18,51 +18,56 @@ int main(int argc, char* argv[]) {
    b:	89 e5                	mov    %esp,%ebp
    d:	56                   	push   %esi
    e:	53                   	push   %ebx
-  char parent_name[MAX_NAME_LEN];
-  char child_name[MAX_NAME_LEN];
+  char parent_name[3];
+  char child_name[3];
 
   if (getparentname(parent_name, child_name, MAX_NAME_LEN, MAX_NAME_LEN) < 0)
-   f:	8d b5 e8 fd ff ff    	lea    -0x218(%ebp),%esi
-  15:	8d 9d e8 fe ff ff    	lea    -0x118(%ebp),%ebx
+   f:	8d 75 e2             	lea    -0x1e(%ebp),%esi
+  12:	8d 5d e5             	lea    -0x1b(%ebp),%ebx
 int main(int argc, char* argv[]) {
-  1b:	51                   	push   %ecx
-  1c:	81 ec 0c 02 00 00    	sub    $0x20c,%esp
+  15:	51                   	push   %ecx
+  16:	83 ec 1c             	sub    $0x1c,%esp
   if (getparentname(parent_name, child_name, MAX_NAME_LEN, MAX_NAME_LEN) < 0)
-  22:	68 00 01 00 00       	push   $0x100
-  27:	68 00 01 00 00       	push   $0x100
-  2c:	53                   	push   %ebx
-  2d:	56                   	push   %esi
-  2e:	e8 30 03 00 00       	call   363 <getparentname>
-  33:	83 c4 10             	add    $0x10,%esp
-  36:	85 c0                	test   %eax,%eax
-  38:	78 23                	js     5d <main+0x5d>
+  19:	68 00 01 00 00       	push   $0x100
+  1e:	68 00 01 00 00       	push   $0x100
+  23:	53                   	push   %ebx
+  24:	56                   	push   %esi
+  25:	e8 39 03 00 00       	call   363 <getparentname>
+  2a:	83 c4 10             	add    $0x10,%esp
+  2d:	85 c0                	test   %eax,%eax
+  2f:	78 23                	js     54 <main+0x54>
   {
     printf(2, "XV6_TEST_ERROR getparentname call failed!\n");
     exit();
   }
 
   printf(1, "XV6_TEST_OUTPUT Parent Name: %s,", parent_name);
-  3a:	50                   	push   %eax
-  3b:	56                   	push   %esi
-  3c:	68 74 07 00 00       	push   $0x774
-  41:	6a 01                	push   $0x1
-  43:	e8 d8 03 00 00       	call   420 <printf>
+  31:	50                   	push   %eax
+  32:	56                   	push   %esi
+  33:	68 74 07 00 00       	push   $0x774
+  38:	6a 01                	push   $0x1
+  3a:	e8 e1 03 00 00       	call   420 <printf>
   printf(1, " Child Name: %s\n", child_name);
-  48:	83 c4 0c             	add    $0xc,%esp
-  4b:	53                   	push   %ebx
-  4c:	68 95 07 00 00       	push   $0x795
-  51:	6a 01                	push   $0x1
-  53:	e8 c8 03 00 00       	call   420 <printf>
+  3f:	83 c4 0c             	add    $0xc,%esp
+  42:	53                   	push   %ebx
+  43:	68 95 07 00 00       	push   $0x795
+  48:	6a 01                	push   $0x1
+  4a:	e8 d1 03 00 00       	call   420 <printf>
   exit();
-  58:	e8 66 02 00 00       	call   2c3 <exit>
+  4f:	e8 6f 02 00 00       	call   2c3 <exit>
     printf(2, "XV6_TEST_ERROR getparentname call failed!\n");
-  5d:	52                   	push   %edx
-  5e:	52                   	push   %edx
-  5f:	68 48 07 00 00       	push   $0x748
-  64:	6a 02                	push   $0x2
-  66:	e8 b5 03 00 00       	call   420 <printf>
+  54:	52                   	push   %edx
+  55:	52                   	push   %edx
+  56:	68 48 07 00 00       	push   $0x748
+  5b:	6a 02                	push   $0x2
+  5d:	e8 be 03 00 00       	call   420 <printf>
     exit();
-  6b:	e8 53 02 00 00       	call   2c3 <exit>
+  62:	e8 5c 02 00 00       	call   2c3 <exit>
+  67:	66 90                	xchg   %ax,%ax
+  69:	66 90                	xchg   %ax,%ax
+  6b:	66 90                	xchg   %ax,%ax
+  6d:	66 90                	xchg   %ax,%ax
+  6f:	90                   	nop
 
 00000070 <strcpy>:
 #include "user.h"

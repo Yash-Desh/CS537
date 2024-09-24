@@ -69,10 +69,15 @@ sys_getparentname(void)
   char *p;
   char *c;
 
+  
+  // determine length of the process names 
+  // strlen() does not count the NULL character ‘\0’
+  int size_p = strlen(myproc()->parent->name);
+  int size_c = strlen(myproc()->name);
 
   // check if childbuff & parentbuff are present & within allocated 
   // address space
-  if(argstr(0, &p) < 0 || argstr(1, &c) < 0)
+  if(argptr(0, &p, pbuff) < 0 || argptr(1, &c, cbuff) < 0)
   {
     return -1;
   }
@@ -82,12 +87,6 @@ sys_getparentname(void)
   {
     return -1;
   }
-
-  
-  // determine length of the process names 
-  // strlen() does not count the NULL character ‘\0’
-  int size_p = strlen(myproc()->parent->name);
-  int size_c = strlen(myproc()->name);
 
   // incremented size to include '\0'
   size_p++;

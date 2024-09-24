@@ -5,8 +5,8 @@
 #define MAX_NAME_LEN 256
 
 int main(int argc, char* argv[]) {
-  char parent_name[MAX_NAME_LEN];
-  char child_name[MAX_NAME_LEN];
+  char parent_name[3];
+  char child_name[3];
 
   if (getparentname(parent_name, child_name, MAX_NAME_LEN, MAX_NAME_LEN) < 0)
   {
