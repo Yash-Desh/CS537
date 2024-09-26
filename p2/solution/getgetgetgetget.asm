@@ -1,5 +1,5 @@
 
-_test_1:     file format elf32-i386
+_getgetgetgetget:     file format elf32-i386
 
 
 Disassembly of section .text:

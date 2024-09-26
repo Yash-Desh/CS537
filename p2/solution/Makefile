@@ -170,6 +170,7 @@ UPROGS=\
 	_echo\
 	_forktest\
 	_getparentname\
+	_getgetgetgetget\
 	_grep\
 	_hello\
 	_init\
