@@ -85,13 +85,13 @@ int main(int argc, char *argv[])
     char *str = NULL;
     size_t size = 0;
     ssize_t len = 0;
-    // char exit_str[] = "exit";
-    // char ls_str[] = "ls";
+    
 
     do
     {
         printf("wsh> ");
-        len = getline(&str, &size, stdin);
+        if((len = getline(&str, &size, stdin)) == -1)
+            exit(0);
 
         // remove new-line character that getline() reads by default
         if (str[strlen(str) - 1] == '\n')
@@ -111,13 +111,13 @@ int main(int argc, char *argv[])
         }
 
         // ls built-in command
-        if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
+        else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
         {
             builtin_ls();
         }
 
         // cd built-in
-        if (strcmp(arg_arr[0], "cd") == 0)
+        else if (strcmp(arg_arr[0], "cd") == 0)
         {
             // check if it takes only one argument
             if (arg_cnt != 2)
@@ -139,7 +139,36 @@ int main(int argc, char *argv[])
             }
         }
 
-        
+        // else
+        // {
+        //     int rc = fork();
+        //     if (rc < 0)
+        //     {
+        //         // fork failed; exit
+        //         fprintf(stderr, "fork failed\n");
+        //         exit(1);
+        //     }
+        //     else if (rc == 0)
+        //     {
+        //         // child (new process)
+        //         printf("hello, I am child (pid:%d)\n", (int)getpid());
+        //         char *myargs[arg_cnt+1];
+        //         for(int i=0; i<arg_cnt; i++)
+        //         {
+        //             myargs[i] = arg_arr[i];
+        //         }
+        //         myargs[arg_cnt] = NULL;          // marks end of array
+        //         execv(myargs[0], myargs); // runs word count
+        //         printf("this shouldn't print out\n");
+        //     }
+        //     else
+        //     {
+        //         // parent goes down this path (original process)
+        //         int wc = wait(NULL);
+        //         printf("hello, I am parent of %d (wc:%d) (pid:%d)\n",
+        //                rc, wc, (int)getpid());
+        //     }
+        // }
 
     } while ((len != -1));
 
