@@ -5,11 +5,11 @@
 
 // ######################################## Parsers ##############################################
 
-int arg_parse(char *str, char **arg_arr)
+int arg_parse(char *str, char **arg_arr, char* delims)
 {
     // using strtok()
     // Returns first token
-    char *token = strtok(str, " ");
+    char *token = strtok(str, delims);
 
     // count the number of arguments
     int arg_cnt = 0;
@@ -21,7 +21,7 @@ int arg_parse(char *str, char **arg_arr)
         // printf(" % s\n", token);
         arg_cnt++;
         arg_arr[arg_cnt - 1] = token;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, delims);
     }
 
     // debug statement
@@ -67,6 +67,32 @@ void builtin_cd(char **arg_arr)
     else
     {
         printf("chdir error\n");
+    }
+}
+
+void builtin_export(char* env_var, char **environ, int* environ_len)
+{
+    environ[*environ_len] = env_var;
+    (*environ_len)++;
+    printf("Number of environment variables = %d\n", *environ_len);
+}
+
+void builtin_local(char* shell_var, char **shellvars, int* shellvars_len)
+{
+    shellvars[*shellvars_len] = strdup(shell_var);
+    (*shellvars_len)++;
+    printf("Number of shell variables = %d\n", *shellvars_len);
+    for(int i=0; i<(*shellvars_len); i++)
+    {
+        printf("%s\n", shellvars[i]);
+    }
+}
+
+void builtin_vars(char **shellvars, int shellvars_len)
+{
+    for(int i=0; i<shellvars_len; i++)
+    {
+        printf("%s\n", shellvars[i]);
     }
 }
 

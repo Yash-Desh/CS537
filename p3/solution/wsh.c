@@ -12,24 +12,21 @@
 #define MAXLINE 1024
 #define MAXARGS 128
 
-// environ — array of character pointers to the environment strings
-extern char **environ;
-
 
 int main(int argc, char *argv[])
 {
-    // // dynamic array to store shell variables
-    // char **shell_var_key = malloc(100*sizeof(char));
-    // char **shell_var_value = malloc(100*sizeof(char));
-    // int shell_var_cnt =0;
+    // entered process wsh
+    // setting environment variable of process-wsh to 
+    // PATH=/bin as mentioned in write-up
+    setenv("PATH", "/bin", 1);
 
-    // currently assigning a static size of 100
-    // char *environ[100];
-    // int environ_len = 1;
-    // environ[0] = "PATH=/bin";
+    // shell_vars stores shell variables as a string
+    // currently shellvars is an array of static size 100
+    char *shellvars[100];
+    int shellvars_len = 0;
 
 
-    // Add feature to perform batch mode
+    // select between batch mode & interactive mode
     if (argc == 2)
     {
         // open argv[1] as a file
@@ -40,12 +37,15 @@ int main(int argc, char *argv[])
         printf("Interactive Mode On\n");
     }
 
+    // declarations for the getline() function
     char *str = NULL;
     size_t size = 0;
     ssize_t len = 0;
 
     do
     {
+        // use fflush to avoid wsh being not print
+
         printf("wsh> ");
         if ((len = getline(&str, &size, stdin)) == -1)
             exit(0);
@@ -56,10 +56,12 @@ int main(int argc, char *argv[])
             str[strlen(str) - 1] = '\0';
         }
 
-        // parse the input
+        // parse the input based on desired delimiter
         // static array of strings to store user arguments
         char *arg_arr[MAXARGS] = {NULL};
-        int arg_cnt = arg_parse(str, arg_arr);
+        int arg_cnt = arg_parse(str, arg_arr, " ");
+
+        // ###################### Built-in Commands #######################
 
         // exit built-in command
         if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
@@ -83,13 +85,19 @@ int main(int argc, char *argv[])
             builtin_cd(arg_arr);
         }
 
-        else if (strcmp(arg_arr[0], "local") == 0)
-        {
-        }
-
         else if (strcmp(arg_arr[0], "export") == 0)
         {
-            //add_to_environ(arg_arr[1], environ, environ_len);
+            // will the user take care of $PATH
+            // builtin_export(arg_arr[1], environ, &environ_len);
+        }
+        else if (strcmp(arg_arr[0], "local") == 0)
+        {
+            builtin_local(arg_arr[1], shellvars, &shellvars_len);
+        }
+
+        else if(strcmp(arg_arr[0], "vars") == 0)
+        {
+            builtin_vars(shellvars, shellvars_len);
         }
 
         // fork+exec
@@ -136,20 +144,51 @@ int main(int argc, char *argv[])
             else if (rc == 0)
             {
                 // child (new process)
-                // printf("hello, I am child (pid:%d)\n", (int)getpid());
+                printf("hello, I am child (pid:%d)\n", (int)getpid());
                 char *myargs[arg_cnt + 1];
                 for (int i = 0; i < arg_cnt; i++)
                 {
                     myargs[i] = arg_arr[i];
                 }
                 myargs[arg_cnt] = NULL;   // marks end of array
-                char temp[100] = "/bin/";
-                strcat(temp, myargs[0]);
-                execv(temp, myargs); // runs word count
-                printf("this shouldn't print out\n");
+
+                // pointer to path string
+                char *path;
+                // path variable has the entire path string now.
+                path = getenv("PATH");
+                printf("%s\n", path);
+                char*path_arg[100];
+
+                // contains the number of added paths
+                int path_cnt = arg_parse(path, path_arg, ":");
+                printf("%d\n", path_cnt);
+                // loop over each added path
+                for(int i=0; i<path_cnt; i++)
+                {
+                    char temp[100];
+                    strcpy(temp, path_arg[i]);
+                    printf("%s\n", temp);
+                    strcat(temp, "/");
+                    printf("%s\n", temp);
+                    strcat(temp, myargs[0]);
+                    printf("%s\n", temp);
+                    if(access(temp, X_OK) != -1)
+                    {
+                        int ret = execv(temp, myargs); // runs word count
+                        printf("%d\n", ret);
+                    }
+                } 
+                // strcat(path, myargs[0]);
+                // printf("%s\n", path);
+                
+                // check errno & perror
+                printf("%s: command not found\n", myargs[0]);
+                // in case failed exec, the child needs to be killed
+                exit(1);
             }
             else
             {
+                // fflush : glibc buffer 
                 // parent goes down this path (original process)
                 int wc = wait(NULL);
                 printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
