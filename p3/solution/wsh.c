@@ -12,11 +12,9 @@
 #define MAXLINE 1024
 #define MAXARGS 128
 
+// environ — array of character pointers to the environment strings
+extern char **environ;
 
-// void handle_command(char **arg_arr, int arg_cnt)
-// {
-//     
-// }
 
 int main(int argc, char *argv[])
 {
@@ -24,6 +22,11 @@ int main(int argc, char *argv[])
     // char **shell_var_key = malloc(100*sizeof(char));
     // char **shell_var_value = malloc(100*sizeof(char));
     // int shell_var_cnt =0;
+
+    // currently assigning a static size of 100
+    // char *environ[100];
+    // int environ_len = 1;
+    // environ[0] = "PATH=/bin";
 
 
     // Add feature to perform batch mode
@@ -84,6 +87,11 @@ int main(int argc, char *argv[])
         {
         }
 
+        else if (strcmp(arg_arr[0], "export") == 0)
+        {
+            //add_to_environ(arg_arr[1], environ, environ_len);
+        }
+
         // fork+exec
         else if (strcmp(arg_arr[0], "test") == 0)
         {
@@ -115,6 +123,38 @@ int main(int argc, char *argv[])
             }
         }
 
+        // to call process
+        else //if(strcmp(arg_arr[0], "ps") == 0)
+        {
+            int rc = fork();
+            if (rc < 0)
+            {
+                // fork failed; exit
+                fprintf(stderr, "fork failed\n");
+                exit(1);
+            }
+            else if (rc == 0)
+            {
+                // child (new process)
+                // printf("hello, I am child (pid:%d)\n", (int)getpid());
+                char *myargs[arg_cnt + 1];
+                for (int i = 0; i < arg_cnt; i++)
+                {
+                    myargs[i] = arg_arr[i];
+                }
+                myargs[arg_cnt] = NULL;   // marks end of array
+                char temp[100] = "/bin/";
+                strcat(temp, myargs[0]);
+                execv(temp, myargs); // runs word count
+                printf("this shouldn't print out\n");
+            }
+            else
+            {
+                // parent goes down this path (original process)
+                int wc = wait(NULL);
+                printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+            }
+        }
     } while ((len != -1));
 
     free(str);

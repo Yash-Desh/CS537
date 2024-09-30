@@ -3,6 +3,8 @@
 #include <dirent.h> // for readdir()
 #include <unistd.h>   // for system calls
 
+// ######################################## Parsers ##############################################
+
 int arg_parse(char *str, char **arg_arr)
 {
     // using strtok()
@@ -26,6 +28,11 @@ int arg_parse(char *str, char **arg_arr)
     printf("tokenization done %d\n", arg_cnt);
     return arg_cnt;
 }
+
+
+
+
+// ######################################### Built-in #############################################
 
 void builtin_ls()
 {
@@ -62,3 +69,9 @@ void builtin_cd(char **arg_arr)
         printf("chdir error\n");
     }
 }
+
+
+// void handle_command(char **arg_arr, int arg_cnt)
+// {
+//     
+// }
