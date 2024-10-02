@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h> // for readdir()
-#include <unistd.h> // for system calls
+#include <dirent.h>   // for readdir()
+#include <unistd.h>   // for system calls
 #include <sys/wait.h> // for wait()
 
 // Piazza @226
@@ -161,6 +161,45 @@ void record_history(char *arg, char *firstarg)
     printf("History has %d commands\n", Hcnt);
 }
 
+
+char * history_replace(char *str2, char ** input_tokens, int arg_cnt, int *flag)
+{
+    // step-1 parse the input_ptr
+    // char *input_tokens[MAXARGS] = {NULL};
+    // int arg_cnt = arg_parse(input_copy, input_tokens, " ");
+
+    // compare if 1st term = "history"
+    if (arg_cnt > 1 && strcmp(input_tokens[0], "history") == 0)
+    {
+        // check if 2nd token is a valid number command_no
+        int command_no = atoi(input_tokens[1]);
+        if (command_no > 0 && command_no <= Hcnt)
+        {
+            // jump to the command_noth instruction
+            int jumps = command_no - 1;
+            struct HNode *ptr = Hfirst;
+            while (Hfirst != NULL && jumps > 0 && ptr != NULL)
+            {
+                ptr = ptr->next;
+                jumps--;
+            }
+            char* str = strdup(ptr->command);
+            *flag = 1;
+            return str;
+        }
+        else
+        {
+            // if command_no is not valid
+            return str2;
+        }
+    }
+
+    else {
+        // if command doesn't start with "history"
+        return str2;
+    }
+}
+
 // ######################################## Parsers ##############################################
 
 int arg_parse(char *str, char **arg_arr, char *delims)
@@ -311,187 +350,183 @@ void builtin_history()
 }
 
 
-void solve(char * str)
+
+void solve(char ** arg_arr, int arg_cnt)
 {
-    // ######################### record history ######################
-        // debug
-        // printf("before record_history() command is: %s\n", str);
-        // record history before strtok as it modifies input string
-        char input_copy[MAXLINE];
-        record_input(input_copy, str);
-        
-        // printf("before record_history() command is: %s\n", input_copy);
-        // record_history(input_copy, arg_arr[0]);
+    // ######################### old stuff commented ######################
+    // flag to denote if history was used
+    // int used_history = 0;
+    // debug
+    // printf("before record_history() command is: %s\n", str);
+    // record history before strtok as it modifies input string
+    // char input_copy[MAXLINE];
+    // record_input(input_copy, str);
+    // char *input_ptr = strdup(str);
+    // int used_history =  history_replace(str, input_ptr);
+    // printf("before record_history() command is: %s\n", input_copy);
+    // record_history(input_copy, arg_arr[0]);
+    // printf("after arg_parse() command is: %s\n", input_copy);
 
-        // parse the input based on desired delimiter
-        // static array of strings to store user arguments
-        // arg_parse modifies the str string
-        char *arg_arr[MAXARGS] = {NULL};
-        int arg_cnt = arg_parse(str, arg_arr, " ");
+    // ###################### Built-in Commands #######################
 
-        record_history(input_copy, arg_arr[0]);
-        // printf("after arg_parse() command is: %s\n", input_copy);
+    // exit built-in command
+    if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
+    {
+        exit(0);
+    }
 
-        // ###################### Built-in Commands #######################
-
-        // exit built-in command
-        if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
+    // cd built-in
+    else if (strcmp(arg_arr[0], "cd") == 0)
+    {
+        // check if it takes only one argument
+        if (arg_cnt == 2)
         {
+            builtin_cd(arg_arr);
+        }
+    }
+
+    // export built-in command
+    else if (strcmp(arg_arr[0], "export") == 0)
+    {
+        char *env_var[2];
+        arg_parse(arg_arr[1], env_var, "=");
+        setenv(env_var[0], env_var[1], 1);
+    }
+
+    // local built-in
+    else if (strcmp(arg_arr[0], "local") == 0)
+    {
+        // compare that the variable is not already present
+        // if yes : update variable
+        // if no : create new variable & store new value
+        builtin_local(arg_arr[1], &shellvars_len);
+
+        // NOTE: run this command "local varname"
+    }
+
+    // vars built-n
+    else if (strcmp(arg_arr[0], "vars") == 0)
+    {
+        // printf("Entered vars condition\n");
+        builtin_vars();
+    }
+
+    // history built-n
+    else if (strcmp(arg_arr[0], "history") == 0)
+    {
+        // printf("Entered history condition\n");
+        if (arg_cnt > 2 && !strcmp(arg_arr[1], "set"))
+        {
+            change_history_size(arg_arr[2]);
+        }
+        else if(arg_cnt == 1)
+        {
+            builtin_history();
+        }
+    }
+
+    // ls built-in command
+    else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
+    {
+        builtin_ls();
+    }
+
+    // ################################### Path based #################################
+
+    // absolute + relative path
+    else if (access(arg_arr[0], X_OK) != -1)
+    {
+        int rc = fork();
+        if (rc < 0)
+        {
+            // fork failed; exit
+            fprintf(stderr, "fork failed\n");
+            exit(1);
+        }
+        else if (rc == 0)
+        {
+            // child (new process)
+            // printf("hello, I am child (pid:%d)\n", (int)getpid());
+            char *myargs[arg_cnt + 1];
+            for (int i = 0; i < arg_cnt; i++)
+            {
+                myargs[i] = arg_arr[i];
+            }
+            myargs[arg_cnt] = NULL;   // marks end of array
+            execv(myargs[0], myargs); // runs word count
+            printf("this shouldn't print out\n");
+            // kill the child if the execv failed
             exit(0);
         }
-
-        // cd built-in
-        else if (strcmp(arg_arr[0], "cd") == 0)
+        else
         {
-            // check if it takes only one argument
-            if (arg_cnt == 2)
+            // parent goes down this path (original process)
+            int wc = wait(NULL);
+            printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+        }
+    }
+
+    // $PATH
+    else // if(strcmp(arg_arr[0], "ps") == 0)
+    {
+        int rc = fork();
+        if (rc < 0)
+        {
+            // fork failed; exit
+            fprintf(stderr, "fork failed\n");
+            exit(1);
+        }
+        else if (rc == 0)
+        {
+            // child (new process)
+            printf("hello, I am child (pid:%d)\n", (int)getpid());
+            char *myargs[arg_cnt + 1];
+            for (int i = 0; i < arg_cnt; i++)
             {
-                builtin_cd(arg_arr);
+                myargs[i] = arg_arr[i];
             }
-        }
+            myargs[arg_cnt] = NULL; // marks end of array
 
-        // export built-in command
-        else if (strcmp(arg_arr[0], "export") == 0)
-        {
-            char* env_var[2];
-            arg_parse(arg_arr[1], env_var, "=");
-            setenv(env_var[0], env_var[1], 1);
-        }
+            // pointer to path string
+            char *path;
+            // path variable has the entire path string now.
+            path = getenv("PATH");
+            // printf("%s\n", path);
+            char *path_arg[100];
 
-        // local built-in
-        else if (strcmp(arg_arr[0], "local") == 0)
-        {
-            // compare that the variable is not already present
-            // if yes : update variable
-            // if no : create new variable & store new value
-            builtin_local(arg_arr[1], &shellvars_len);
-
-            // NOTE: run this command "local varname"
-        }
-
-        // vars built-n
-        else if(strcmp(arg_arr[0], "vars") == 0)
-        {
-            // printf("Entered vars condition\n");
-            builtin_vars();
-        }
-
-        // history built-n
-        else if(strcmp(arg_arr[0], "history") == 0)
-        {
-            // printf("Entered history condition\n");
-            if(arg_cnt > 2 && !strcmp(arg_arr[1], "set"))
+            // contains the number of added paths
+            int path_cnt = arg_parse(path, path_arg, ":");
+            // printf("%d\n", path_cnt);
+            // loop over each added path
+            for (int i = 0; i < path_cnt; i++)
             {
-                change_history_size(arg_arr[2]);
-            }
-            else{
-                builtin_history();
-            }
-            
-        }
-
-        // ls built-in command
-        else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
-        {
-            builtin_ls();
-        }
-
-        // ################################### Path based #################################
-
-        // absolute + relative path
-        else if (access(arg_arr[0], X_OK) != -1)
-        {
-            int rc = fork();
-            if (rc < 0)
-            {
-                // fork failed; exit
-                fprintf(stderr, "fork failed\n");
-                exit(1);
-            }
-            else if (rc == 0)
-            {
-                // child (new process)
-                // printf("hello, I am child (pid:%d)\n", (int)getpid());
-                char *myargs[arg_cnt + 1];
-                for (int i = 0; i < arg_cnt; i++)
+                char temp[100];
+                strcpy(temp, path_arg[i]);
+                // printf("%s\n", temp);
+                strcat(temp, "/");
+                // printf("%s\n", temp);
+                strcat(temp, myargs[0]);
+                // printf("%s\n", temp);
+                if (access(temp, X_OK) != -1)
                 {
-                    myargs[i] = arg_arr[i];
+                    int ret = execv(temp, myargs); // runs word count
+                    printf("%d\n", ret);
                 }
-                myargs[arg_cnt] = NULL;   // marks end of array
-                execv(myargs[0], myargs); // runs word count
-                printf("this shouldn't print out\n");
-                // kill the child if the execv failed
-                exit(0);
             }
-            else
-            {
-                // parent goes down this path (original process)
-                int wc = wait(NULL);
-                printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
-            }
-        }
+            // strcat(path, myargs[0]);
+            // printf("%s\n", path);
 
-        // $PATH
-        else //if(strcmp(arg_arr[0], "ps") == 0)
+            // check errno & perror
+            printf("%s: command not found\n", myargs[0]);
+            // in case failed exec, the child needs to be killed
+            exit(1);
+        }
+        else
         {
-            int rc = fork();
-            if (rc < 0)
-            {
-                // fork failed; exit
-                fprintf(stderr, "fork failed\n");
-                exit(1);
-            }
-            else if (rc == 0)
-            {
-                // child (new process)
-                printf("hello, I am child (pid:%d)\n", (int)getpid());
-                char *myargs[arg_cnt + 1];
-                for (int i = 0; i < arg_cnt; i++)
-                {
-                    myargs[i] = arg_arr[i];
-                }
-                myargs[arg_cnt] = NULL;   // marks end of array
-
-                // pointer to path string
-                char *path;
-                // path variable has the entire path string now.
-                path = getenv("PATH");
-                // printf("%s\n", path);
-                char*path_arg[100];
-
-                // contains the number of added paths
-                int path_cnt = arg_parse(path, path_arg, ":");
-                // printf("%d\n", path_cnt);
-                // loop over each added path
-                for(int i=0; i<path_cnt; i++)
-                {
-                    char temp[100];
-                    strcpy(temp, path_arg[i]);
-                    // printf("%s\n", temp);
-                    strcat(temp, "/");
-                    // printf("%s\n", temp);
-                    strcat(temp, myargs[0]);
-                    // printf("%s\n", temp);
-                    if(access(temp, X_OK) != -1)
-                    {
-                        int ret = execv(temp, myargs); // runs word count
-                        printf("%d\n", ret);
-                    }
-                } 
-                // strcat(path, myargs[0]);
-                // printf("%s\n", path);
-                
-                // check errno & perror
-                printf("%s: command not found\n", myargs[0]);
-                // in case failed exec, the child needs to be killed
-                exit(1);
-            }
-            else
-            {
-                // fflush : glibc buffer 
-                // parent goes down this path (original process)
-                int wc = wait(NULL);
-                printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
-            }
+            // fflush : glibc buffer
+            // parent goes down this path (original process)
+            int wc = wait(NULL);
+            printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
         }
+    }
 }
