@@ -9,7 +9,7 @@ struct SNode
 {
     char *key;
     char *value;
-    struct SNode* next;
+    struct SNode *next;
 };
 struct SNode *Sfirst = NULL;
 
@@ -17,29 +17,70 @@ struct SNode *Sfirst = NULL;
 struct HNode
 {
     char *command;
-    struct HNode* next;
-} ;
-struct HNode *Hfirst=NULL;
+    struct HNode *next;
+};
+struct HNode *Hfirst = NULL;
 
 // ##################################### History ##############################################
 
-int Hcnt=0;     // variable for history length
-void record_history(char *arg)
+void record_input(char *dest, char *src)
+{
+    int i = 0;
+    for (; src[i] != '\0'; i++)
+    {
+        dest[i] = src[i];
+    }
+    dest[i] = '\0';
+}
+
+int Hcnt = 0; // variable for history length
+int Hsize = 5;
+void record_history(char *arg, char *firstarg)
 {
     // debug
     // printf("In record_history str is: %s\n", arg);
+    if (!strcmp(firstarg, "history") ||
+        !strcmp(firstarg, "exit") ||
+        !strcmp(firstarg, "cd") ||
+        !strcmp(firstarg, "export") ||
+        !strcmp(firstarg, "local") ||
+        !strcmp(firstarg, "vars") ||
+        !strcmp(firstarg, "ls") ||
+        ((Hfirst != NULL) && !strcmp(Hfirst->command, arg)))
+    {
+        return;
+    }
+
+    // remove the extra elements
+    if (Hcnt >= Hsize)
+    {
+        struct HNode *ptr = Hfirst;
+        while (Hfirst != NULL && ptr->next->next != NULL)
+        {
+            ptr = ptr->next;
+        }
+        // temp node to point on the last node
+        struct HNode *temp = ptr->next;
+        // space created to add new node
+        ptr->next = NULL;
+        // free last node memory
+        free(temp);
+        
+    }
+
 
     // create a new node
-    struct HNode *temp = (struct HNode*)malloc(sizeof(struct HNode));
+    struct HNode *temp = (struct HNode *)malloc(sizeof(struct HNode));
     temp->command = strdup(arg);
     // temp->command = arg;
     temp->next = NULL;
 
-    if(Hfirst == NULL)
+    if (Hfirst == NULL)
     {
         Hfirst = temp;
     }
-    else{
+    else
+    {
         temp->next = Hfirst;
         Hfirst = temp;
         // struct HNode *hptr = Hfirst;
@@ -52,7 +93,6 @@ void record_history(char *arg)
     Hcnt++;
     printf("History has %d commands\n", Hcnt);
 }
-
 
 // ######################################## Parsers ##############################################
 
@@ -128,15 +168,15 @@ void builtin_export(char *env_var, char **environ, int *environ_len)
 void builtin_local(char *arg, int *shellvars_len)
 {
     // check if variable is already present in list
-    struct SNode* ptr = Sfirst;
-    
+    struct SNode *ptr = Sfirst;
+
     // parse the argument to local
-    char* temp[2];
+    char *temp[2];
     arg_parse(arg, temp, "=");
-    
+
     while (ptr != NULL)
     {
-        if(strcmp(ptr->key, temp[0])==0)
+        if (strcmp(ptr->key, temp[0]) == 0)
         {
             ptr->value = strdup(temp[1]);
             return;
@@ -161,9 +201,9 @@ void builtin_local(char *arg, int *shellvars_len)
     }
     else
     {
-    //     // struct shell_var *ptr = head;
+        //     // struct shell_var *ptr = head;
         // printf("Inside else condition\n");
-        while(ptr->next != NULL)
+        while (ptr->next != NULL)
         {
             printf("inside while loop\n");
             ptr = ptr->next;
@@ -173,17 +213,16 @@ void builtin_local(char *arg, int *shellvars_len)
     // debug statements : to be removed
     (*shellvars_len)++;
     printf("Number of shell variables = %d\n", *shellvars_len);
-    
 }
 
 void builtin_vars()
 {
     // printf("entered builtin_vars function\n");
-    if(Sfirst == NULL)
+    if (Sfirst == NULL)
     {
         printf("No shell variable\n");
     }
-    struct SNode* ptr = Sfirst;
+    struct SNode *ptr = Sfirst;
     while (ptr != NULL)
     {
         printf("%s", ptr->key);
@@ -197,7 +236,7 @@ void builtin_vars()
 void builtin_history()
 {
     struct HNode *hptr = Hfirst;
-    while(hptr != NULL)
+    while (hptr != NULL)
     {
         printf("%s\n", hptr->command);
         hptr = hptr->next;

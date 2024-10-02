@@ -58,14 +58,20 @@ int main(int argc, char *argv[])
         // debug
         // printf("before record_history() command is: %s\n", str);
         // record history before strtok as it modifies input string
-        record_history(str);
+        char input_copy[MAXLINE];
+        record_input(input_copy, str);
+        
+        printf("before record_history() command is: %s\n", input_copy);
+        // record_history(input_copy, arg_arr[0]);
 
         // parse the input based on desired delimiter
         // static array of strings to store user arguments
+        // arg_parse modifies the str string
         char *arg_arr[MAXARGS] = {NULL};
         int arg_cnt = arg_parse(str, arg_arr, " ");
 
-        
+        record_history(input_copy, arg_arr[0]);
+        printf("after arg_parse() command is: %s\n", input_copy);
 
         // ###################### Built-in Commands #######################
 
@@ -100,6 +106,8 @@ int main(int argc, char *argv[])
             // if yes : update variable
             // if no : create new variable & store new value
             builtin_local(arg_arr[1], &shellvars_len);
+
+            // NOTE: run this command "local varname"
         }
 
         // vars built-n
