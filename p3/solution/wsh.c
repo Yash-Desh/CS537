@@ -54,10 +54,18 @@ int main(int argc, char *argv[])
             str[strlen(str) - 1] = '\0';
         }
 
+        // ######################### record history ######################
+        // debug
+        // printf("before record_history() command is: %s\n", str);
+        // record history before strtok as it modifies input string
+        record_history(str);
+
         // parse the input based on desired delimiter
         // static array of strings to store user arguments
         char *arg_arr[MAXARGS] = {NULL};
         int arg_cnt = arg_parse(str, arg_arr, " ");
+
+        
 
         // ###################### Built-in Commands #######################
 
@@ -65,12 +73,6 @@ int main(int argc, char *argv[])
         if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
         {
             exit(0);
-        }
-
-        // ls built-in command
-        else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
-        {
-            builtin_ls();
         }
 
         // cd built-in
@@ -83,6 +85,7 @@ int main(int argc, char *argv[])
             builtin_cd(arg_arr);
         }
 
+        // export built-in command
         else if (strcmp(arg_arr[0], "export") == 0)
         {
             char* env_var[2];
@@ -93,18 +96,10 @@ int main(int argc, char *argv[])
         // local built-in
         else if (strcmp(arg_arr[0], "local") == 0)
         {
-            // parse the argument to local
-            // char* temp[2];
-            // arg_parse(arg_arr[1], temp, "=");
-            // printf("%s & %s", temp[0], temp[1]);
-            
-            // printf("Entered local condition\n\n");
+            // compare that the variable is not already present
+            // if yes : update variable
+            // if no : create new variable & store new value
             builtin_local(arg_arr[1], &shellvars_len);
-
-            // printf("after calling builtin_local\n");
-            // printf("%s", Sfirst->key);
-            // printf("=");
-            // printf("%s\n", Sfirst->value);
         }
 
         // vars built-n
@@ -114,11 +109,18 @@ int main(int argc, char *argv[])
             builtin_vars();
         }
 
-        // vars built-n
+        // history built-n
         else if(strcmp(arg_arr[0], "history") == 0)
         {
             printf("Entered history condition\n");
-            // builtin_vars(shellvar_head);
+            builtin_history();
+            
+        }
+
+        // ls built-in command
+        else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
+        {
+            builtin_ls();
         }
 
         // ################################### Path based #################################

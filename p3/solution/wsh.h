@@ -4,14 +4,54 @@
 #include <dirent.h> // for readdir()
 #include <unistd.h> // for system calls
 
-// Linked List Node Definition for shell variables
+// Linked List for shell variables
 struct SNode
 {
     char *key;
     char *value;
     struct SNode* next;
 };
-struct SNode *Sfirst;
+struct SNode *Sfirst = NULL;
+
+// Linked List for history
+struct HNode
+{
+    char *command;
+    struct HNode* next;
+} ;
+struct HNode *Hfirst=NULL;
+
+// ##################################### History ##############################################
+
+int Hcnt=0;     // variable for history length
+void record_history(char *arg)
+{
+    // debug
+    // printf("In record_history str is: %s\n", arg);
+
+    // create a new node
+    struct HNode *temp = (struct HNode*)malloc(sizeof(struct HNode));
+    temp->command = strdup(arg);
+    // temp->command = arg;
+    temp->next = NULL;
+
+    if(Hfirst == NULL)
+    {
+        Hfirst = temp;
+    }
+    else{
+        temp->next = Hfirst;
+        Hfirst = temp;
+        // struct HNode *hptr = Hfirst;
+        // while(hptr->next != NULL)
+        // {
+        //     hptr = hptr->next;
+        // }
+        // hptr->next = temp;
+    }
+    Hcnt++;
+    printf("History has %d commands\n", Hcnt);
+}
 
 
 // ######################################## Parsers ##############################################
@@ -87,26 +127,25 @@ void builtin_export(char *env_var, char **environ, int *environ_len)
 
 void builtin_local(char *arg, int *shellvars_len)
 {
-    // create new node
-    
-
-    
-    // if(Sfirst != NULL)
-    // {
-    //     printf("%s", Sfirst->key);
-    //     printf("=");
-    //     printf("%s\n", Sfirst->value);
-    // }
-    // ptr = ptr->next;
-    
+    // check if variable is already present in list
     struct SNode* ptr = Sfirst;
     
     // parse the argument to local
     char* temp[2];
     arg_parse(arg, temp, "=");
-    // printf("%s & %s", temp[0], temp[1]);
+    
+    while (ptr != NULL)
+    {
+        if(strcmp(ptr->key, temp[0])==0)
+        {
+            ptr->value = strdup(temp[1]);
+            return;
+        }
+        ptr = ptr->next;
+    }
 
-
+    // return the iterator to head pointer
+    ptr = Sfirst;
     struct SNode *t;
     t = (struct SNode *)malloc(sizeof(struct SNode));
     t->key = strdup(temp[0]);
@@ -131,21 +170,10 @@ void builtin_local(char *arg, int *shellvars_len)
         }
         ptr->next = t;
     }
-    // printf("after if condition\n");
-    // printf("key = %s & value = %s\n", ptr->key, ptr->value);
+    // debug statements : to be removed
     (*shellvars_len)++;
     printf("Number of shell variables = %d\n", *shellvars_len);
-    // return head1;
-
-    // ptr = Sfirst;
-    // while (ptr != NULL)
-    // {
-    //     printf("%s", ptr->key);
-    //     printf("=");
-    //     printf("%s\n", ptr->value);
-    //     ptr = ptr->next;
-    // }
-
+    
 }
 
 void builtin_vars()
@@ -166,7 +194,12 @@ void builtin_vars()
     // printf("exiting builtin_vars function\n");
 }
 
-// void handle_command(char **arg_arr, int arg_cnt)
-// {
-//
-// }
+void builtin_history()
+{
+    struct HNode *hptr = Hfirst;
+    while(hptr != NULL)
+    {
+        printf("%s\n", hptr->command);
+        hptr = hptr->next;
+    }
+}
