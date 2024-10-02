@@ -12,7 +12,6 @@
 #define MAXLINE 1024
 #define MAXARGS 128
 
-
 int main(int argc, char *argv[])
 {
     // entered process wsh
@@ -20,11 +19,10 @@ int main(int argc, char *argv[])
     // PATH=/bin as mentioned in write-up
     setenv("PATH", "/bin", 1);
 
-    // shell_vars stores shell variables as a string
-    // currently shellvars is an array of static size 100
-    char *shellvars[100];
+    // Declaring the Linked List to store all the shell variables
     int shellvars_len = 0;
-
+    // struct shell_var *shellvar_head=NULL;
+    
 
     // select between batch mode & interactive mode
     if (argc == 2)
@@ -87,21 +85,46 @@ int main(int argc, char *argv[])
 
         else if (strcmp(arg_arr[0], "export") == 0)
         {
-            // will the user take care of $PATH
-            // builtin_export(arg_arr[1], environ, &environ_len);
+            char* env_var[2];
+            arg_parse(arg_arr[1], env_var, "=");
+            setenv(env_var[0], env_var[1], 1);
         }
+
+        // local built-in
         else if (strcmp(arg_arr[0], "local") == 0)
         {
-            builtin_local(arg_arr[1], shellvars, &shellvars_len);
+            // parse the argument to local
+            // char* temp[2];
+            // arg_parse(arg_arr[1], temp, "=");
+            // printf("%s & %s", temp[0], temp[1]);
+            
+            // printf("Entered local condition\n\n");
+            builtin_local(arg_arr[1], &shellvars_len);
+
+            // printf("after calling builtin_local\n");
+            // printf("%s", Sfirst->key);
+            // printf("=");
+            // printf("%s\n", Sfirst->value);
         }
 
+        // vars built-n
         else if(strcmp(arg_arr[0], "vars") == 0)
         {
-            builtin_vars(shellvars, shellvars_len);
+            // printf("Entered vars condition\n");
+            builtin_vars();
         }
 
-        // fork+exec
-        else if (strcmp(arg_arr[0], "test") == 0)
+        // vars built-n
+        else if(strcmp(arg_arr[0], "history") == 0)
+        {
+            printf("Entered history condition\n");
+            // builtin_vars(shellvar_head);
+        }
+
+        // ################################### Path based #################################
+
+        // absolute + relative path
+        else if (access(arg_arr[0], X_OK) != -1)
         {
             int rc = fork();
             if (rc < 0)
@@ -122,6 +145,8 @@ int main(int argc, char *argv[])
                 myargs[arg_cnt] = NULL;   // marks end of array
                 execv(myargs[0], myargs); // runs word count
                 printf("this shouldn't print out\n");
+                // kill the child if the execv failed
+                exit(0);
             }
             else
             {
@@ -131,7 +156,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        // to call process
+        // $PATH
         else //if(strcmp(arg_arr[0], "ps") == 0)
         {
             int rc = fork();

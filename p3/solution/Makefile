@@ -2,6 +2,7 @@ CC = gcc # specifying the compiler
 CFLAGS = -Wall -Wextra -Werror -pedantic -std=gnu18	 # specifying the arguments for compilation
 LOGIN = yashd # specifying you login
 SUBMITPATH = ~cs537-1/handin/$(LOGIN)# specifying the path where you handin your files
+TARGET = wsh
 
 .PHONY: all
 all: wsh wsh-dbg test
@@ -20,4 +21,4 @@ submit:
 
 .PHONY:clean
 clean:
-	rm -f *.bin
+	rm -f $(TARGET) $(TARGET)-dbg
