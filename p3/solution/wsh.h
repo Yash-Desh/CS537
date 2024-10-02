@@ -3,6 +3,12 @@
 #include <string.h>
 #include <dirent.h> // for readdir()
 #include <unistd.h> // for system calls
+#include <sys/wait.h> // for wait()
+
+// Piazza @226
+// constraints on the input like command length and number of arguments
+#define MAXLINE 1024
+#define MAXARGS 128
 
 // Linked List for shell variables
 struct SNode
@@ -12,6 +18,7 @@ struct SNode
     struct SNode *next;
 };
 struct SNode *Sfirst = NULL;
+int shellvars_len = 0;
 
 // Linked List for history
 struct HNode
@@ -35,10 +42,68 @@ void record_input(char *dest, char *src)
 
 int Hcnt = 0; // variable for history length
 int Hsize = 5;
+
+// prune history is called twice
+// flag=0 => from function change_history_size()
+// flag=1 => from function record_history()
+
+void prune_history(int history_size, int history_cnt, int func_flag)
+{
+    // if history has 5 elements, make 3 jumps to reach 4th element
+    int jumps = 0;
+    if (func_flag == 0)
+    {
+        jumps = history_size - 1;
+    }
+    else
+    {
+        jumps = history_size - 2;
+    }
+
+    // remove the extra elements
+    if (history_cnt >= history_size)
+    {
+        struct HNode *ptr = Hfirst;
+        while (Hfirst != NULL && jumps > 0)
+        {
+            ptr = ptr->next;
+            jumps--;
+        }
+        // temp node to point on the last node
+        struct HNode *temp = ptr->next;
+        struct HNode *prev = NULL;
+        ptr->next = NULL;
+        // space created to add new node
+        while (temp != NULL)
+        {
+            prev = temp;
+            temp = temp->next;
+            free(prev);
+        }
+        // modifiy Hcnt
+        if (func_flag == 0)
+        {
+            Hcnt = history_size;
+        }
+        else
+        {
+            Hcnt = history_size - 1;
+        }
+    }
+}
+
+void change_history_size(char *n)
+{
+    int newsize = atoi(n);
+    Hsize = newsize;
+    prune_history(newsize, Hcnt, 0);
+    printf("History size changed to %d\n", Hsize);
+}
+
 void record_history(char *arg, char *firstarg)
 {
     // debug
-    // printf("In record_history str is: %s\n", arg);
+    printf("In record_history str is: %s\n", arg);
     if (!strcmp(firstarg, "history") ||
         !strcmp(firstarg, "exit") ||
         !strcmp(firstarg, "cd") ||
@@ -52,22 +117,24 @@ void record_history(char *arg, char *firstarg)
     }
 
     // remove the extra elements
-    if (Hcnt >= Hsize)
-    {
-        struct HNode *ptr = Hfirst;
-        while (Hfirst != NULL && ptr->next->next != NULL)
-        {
-            ptr = ptr->next;
-        }
-        // temp node to point on the last node
-        struct HNode *temp = ptr->next;
-        // space created to add new node
-        ptr->next = NULL;
-        // free last node memory
-        free(temp);
-        
-    }
+    // if (Hcnt >= Hsize)
+    // {
+    //     struct HNode *ptr = Hfirst;
+    //     while (Hfirst != NULL && ptr->next->next != NULL)
+    //     {
+    //         ptr = ptr->next;
+    //     }
+    //     // temp node to point on the last node
+    //     struct HNode *temp = ptr->next;
+    //     // space created to add new node
+    //     ptr->next = NULL;
+    //     // free last node memory
+    //     free(temp);
 
+    // }
+    printf("before prune history\n");
+    prune_history(Hsize, Hcnt, 1);
+    printf("after prune history\n");
 
     // create a new node
     struct HNode *temp = (struct HNode *)malloc(sizeof(struct HNode));
@@ -241,4 +308,190 @@ void builtin_history()
         printf("%s\n", hptr->command);
         hptr = hptr->next;
     }
+}
+
+
+void solve(char * str)
+{
+    // ######################### record history ######################
+        // debug
+        // printf("before record_history() command is: %s\n", str);
+        // record history before strtok as it modifies input string
+        char input_copy[MAXLINE];
+        record_input(input_copy, str);
+        
+        // printf("before record_history() command is: %s\n", input_copy);
+        // record_history(input_copy, arg_arr[0]);
+
+        // parse the input based on desired delimiter
+        // static array of strings to store user arguments
+        // arg_parse modifies the str string
+        char *arg_arr[MAXARGS] = {NULL};
+        int arg_cnt = arg_parse(str, arg_arr, " ");
+
+        record_history(input_copy, arg_arr[0]);
+        // printf("after arg_parse() command is: %s\n", input_copy);
+
+        // ###################### Built-in Commands #######################
+
+        // exit built-in command
+        if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
+        {
+            exit(0);
+        }
+
+        // cd built-in
+        else if (strcmp(arg_arr[0], "cd") == 0)
+        {
+            // check if it takes only one argument
+            if (arg_cnt == 2)
+            {
+                builtin_cd(arg_arr);
+            }
+        }
+
+        // export built-in command
+        else if (strcmp(arg_arr[0], "export") == 0)
+        {
+            char* env_var[2];
+            arg_parse(arg_arr[1], env_var, "=");
+            setenv(env_var[0], env_var[1], 1);
+        }
+
+        // local built-in
+        else if (strcmp(arg_arr[0], "local") == 0)
+        {
+            // compare that the variable is not already present
+            // if yes : update variable
+            // if no : create new variable & store new value
+            builtin_local(arg_arr[1], &shellvars_len);
+
+            // NOTE: run this command "local varname"
+        }
+
+        // vars built-n
+        else if(strcmp(arg_arr[0], "vars") == 0)
+        {
+            // printf("Entered vars condition\n");
+            builtin_vars();
+        }
+
+        // history built-n
+        else if(strcmp(arg_arr[0], "history") == 0)
+        {
+            // printf("Entered history condition\n");
+            if(arg_cnt > 2 && !strcmp(arg_arr[1], "set"))
+            {
+                change_history_size(arg_arr[2]);
+            }
+            else{
+                builtin_history();
+            }
+            
+        }
+
+        // ls built-in command
+        else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
+        {
+            builtin_ls();
+        }
+
+        // ################################### Path based #################################
+
+        // absolute + relative path
+        else if (access(arg_arr[0], X_OK) != -1)
+        {
+            int rc = fork();
+            if (rc < 0)
+            {
+                // fork failed; exit
+                fprintf(stderr, "fork failed\n");
+                exit(1);
+            }
+            else if (rc == 0)
+            {
+                // child (new process)
+                // printf("hello, I am child (pid:%d)\n", (int)getpid());
+                char *myargs[arg_cnt + 1];
+                for (int i = 0; i < arg_cnt; i++)
+                {
+                    myargs[i] = arg_arr[i];
+                }
+                myargs[arg_cnt] = NULL;   // marks end of array
+                execv(myargs[0], myargs); // runs word count
+                printf("this shouldn't print out\n");
+                // kill the child if the execv failed
+                exit(0);
+            }
+            else
+            {
+                // parent goes down this path (original process)
+                int wc = wait(NULL);
+                printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+            }
+        }
+
+        // $PATH
+        else //if(strcmp(arg_arr[0], "ps") == 0)
+        {
+            int rc = fork();
+            if (rc < 0)
+            {
+                // fork failed; exit
+                fprintf(stderr, "fork failed\n");
+                exit(1);
+            }
+            else if (rc == 0)
+            {
+                // child (new process)
+                printf("hello, I am child (pid:%d)\n", (int)getpid());
+                char *myargs[arg_cnt + 1];
+                for (int i = 0; i < arg_cnt; i++)
+                {
+                    myargs[i] = arg_arr[i];
+                }
+                myargs[arg_cnt] = NULL;   // marks end of array
+
+                // pointer to path string
+                char *path;
+                // path variable has the entire path string now.
+                path = getenv("PATH");
+                // printf("%s\n", path);
+                char*path_arg[100];
+
+                // contains the number of added paths
+                int path_cnt = arg_parse(path, path_arg, ":");
+                // printf("%d\n", path_cnt);
+                // loop over each added path
+                for(int i=0; i<path_cnt; i++)
+                {
+                    char temp[100];
+                    strcpy(temp, path_arg[i]);
+                    // printf("%s\n", temp);
+                    strcat(temp, "/");
+                    // printf("%s\n", temp);
+                    strcat(temp, myargs[0]);
+                    // printf("%s\n", temp);
+                    if(access(temp, X_OK) != -1)
+                    {
+                        int ret = execv(temp, myargs); // runs word count
+                        printf("%d\n", ret);
+                    }
+                } 
+                // strcat(path, myargs[0]);
+                // printf("%s\n", path);
+                
+                // check errno & perror
+                printf("%s: command not found\n", myargs[0]);
+                // in case failed exec, the child needs to be killed
+                exit(1);
+            }
+            else
+            {
+                // fflush : glibc buffer 
+                // parent goes down this path (original process)
+                int wc = wait(NULL);
+                printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+            }
+        }
 }
