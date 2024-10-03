@@ -279,20 +279,42 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 
 void builtin_ls()
 {
-    DIR *d;
-    struct dirent *dir;
-    d = opendir(".");
-    if (d)
+    // DIR *d;
+    // struct dirent *dir;
+    // // . represents current working directory
+    // d = opendir(".");
+    // if (d)
+    // {
+    //     while ((dir = readdir(d)) != NULL)
+    //     {
+    //         // Prevent "." & ".." from getting printed
+    //         if (dir->d_name[0] == '.')
+    //             continue;
+    //         printf("%s\n", dir->d_name);
+    //     }
+    //     closedir(d);
+    // }
+
+    int no_of_files;
+    // char** fileList;
+    struct dirent **fileListTemp;
+    char *path = ".";
+    no_of_files = scandir(path, &fileListTemp, NULL, alphasort);
+    // printf("no of files : %d\n", no_of_files);
+    for (int i = 0; i < no_of_files; i++)
     {
-        while ((dir = readdir(d)) != NULL)
-        {
-            // Prevent "." & ".." from getting printed
-            if (dir->d_name[0] == '.')
-                continue;
-            printf("%s\n", dir->d_name);
-        }
-        closedir(d);
+        if (fileListTemp[i]->d_name[0] == '.')
+            continue;
+        printf("%s\n", fileListTemp[i]->d_name);
     }
+
+    // free the memory
+    for (int i = 0; i < no_of_files; i++)
+    {
+        free(fileListTemp[i]);
+    }
+
+    free(fileListTemp);
 }
 
 void builtin_cd(char **arg_arr)
@@ -313,12 +335,12 @@ void builtin_cd(char **arg_arr)
     }
 }
 
-void builtin_export(char *env_var, char **environ, int *environ_len)
-{
-    environ[*environ_len] = env_var;
-    (*environ_len)++;
-    printf("Number of environment variables = %d\n", *environ_len);
-}
+// void builtin_export(char *env_var, char **environ, int *environ_len)
+// {
+//     environ[*environ_len] = env_var;
+//     (*environ_len)++;
+//     printf("Number of environment variables = %d\n", *environ_len);
+// }
 
 void builtin_local(char *arg, int *shellvars_len)
 {
@@ -391,7 +413,7 @@ void builtin_vars()
 void builtin_history()
 {
     struct HNode *hptr = Hfirst;
-    int i =1;
+    int i = 1;
     while (hptr != NULL)
     {
         printf("%d) %s\n", i, hptr->command);
@@ -402,22 +424,6 @@ void builtin_history()
 
 void solve(char **arg_arr, int arg_cnt)
 {
-    // ######################### old stuff commented ######################
-    // flag to denote if history was used
-    // int used_history = 0;
-    // debug
-    // printf("before record_history() command is: %s\n", str);
-    // record history before strtok as it modifies input string
-    // char input_copy[MAXLINE];
-    // record_input(input_copy, str);
-    // char *input_ptr = strdup(str);
-    // int used_history =  history_replace(str, input_ptr);
-    // printf("before record_history() command is: %s\n", input_copy);
-    // record_history(input_copy, arg_arr[0]);
-    // printf("after arg_parse() command is: %s\n", input_copy);
-
-    // ###################### Built-in Commands #######################
-
     // exit built-in command
     if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
     {
@@ -511,7 +517,7 @@ void solve(char **arg_arr, int arg_cnt)
         else
         {
             // parent goes down this path (original process)
-            // int wc = 
+            // int wc =
             wait(NULL);
             // printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
         }
@@ -584,6 +590,28 @@ void solve(char **arg_arr, int arg_cnt)
 }
 
 
+void free_memory()
+{
+    // free history linked list
+    struct HNode* hprev=NULL;
+    while(Hfirst != NULL)
+    {
+        hprev = Hfirst;
+        Hfirst = Hfirst->next;
+        free(hprev);
+    } 
+
+    // free shell variables linked list
+    struct SNode* sprev=NULL;
+    while(Sfirst != NULL)
+    {
+        sprev = Sfirst;
+        Sfirst = Sfirst->next;
+        free(sprev);
+    } 
+    // printf("freed memory\n");
+}
+
 // // Piazza @226
 // // constraints on the input like command length and number of arguments
 // #define MAXLINE 1024
@@ -609,18 +637,95 @@ int main(int argc, char *argv[])
     if (argc == 2)
     {
         // open argv[1] as a file
-        printf("Opening %s as a file\n", argv[1]);
+        FILE *file_ptr = NULL;
+        file_ptr = fopen(argv[1], "r");
+        // printf("Entered Batch mode\n");
+        //while ((len = getline(&input, &size, file_ptr)) != -1)
+        while(1)
+        {
+            
+            // ######################## Take user input ###########################
+            // printf("wsh> ");
+            // fflush(stdout);
+            if ((len = getline(&input, &size, file_ptr)) == -1)
+                break;
+            // printf("\n");
+            // remove new-line character that getline() reads by default
+            if (input[strlen(input) - 1] == '\n')
+            {
+                input[strlen(input) - 1] = '\0';
+            }
+            // printf("line read :%s\n", input);
+
+            // ################## parse the input for spaces #######################
+            // make a deep copy of the user input
+            char *str1 = strdup(input);
+            char *arg_arr1[MAXARGS] = {NULL};
+            int arg_cnt = arg_parse(str1, arg_arr1, " ");
+
+            // ######################## Handle spaces/newlines in files ######################
+            if(arg_cnt == 0)
+                continue;
+
+            // ####################### Handle comments ###############################
+            char *comment_token = arg_arr1[0];
+            if (comment_token[0] == '#')
+            {
+                // printf("Treated as batch comment\n");
+                continue;
+            }
+
+            // ################### handle variable substitution ######################
+            char *str5 = strdup(input);
+            char *sub_input = NULL;
+            for (int i = 0; i < arg_cnt; i++)
+            {
+                char *temp_token = arg_arr1[i];
+                if (temp_token[0] == '$')
+                {
+                    printf("$ encountered\n");
+                    sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
+                }
+            }
+            if (sub_input == NULL)
+            {
+                sub_input = input;
+            }
+
+            // ################### handle history ###################
+            // create a deep copy of input
+            char *str2 = strdup(sub_input);
+            int used_history = 0;
+            char *actual_input = history_replace(str2, arg_arr1, arg_cnt, &used_history);
+
+            // only if needed record history
+            char *str3 = strdup(sub_input);
+            char input_copy[MAXLINE];
+            record_input(input_copy, str3);
+            if (used_history == 0)
+            {
+                record_history(input_copy, arg_arr1[0]);
+            }
+
+            // execute the needed command
+            // create a deep copy of input
+            char *str4 = strdup(actual_input);
+            char *arg_arr2[MAXARGS] = {NULL};
+            arg_cnt = arg_parse(str4, arg_arr2, " ");
+            solve(arg_arr2, arg_cnt);
+        }
+        fclose(file_ptr);
     }
     else if (argc == 1)
     {
         // printf("Interactive Mode On\n");
-        while(1)
+        while (1)
         {
             // ######################## Take user input ###########################
             printf("wsh> ");
             fflush(stdout);
             if ((len = getline(&input, &size, stdin)) == -1)
-                exit(0);
+                break;
             // printf("\n");
             // remove new-line character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
@@ -638,7 +743,7 @@ int main(int argc, char *argv[])
             char *comment_token = arg_arr1[0];
             if (comment_token[0] == '#')
             {
-                printf("Treated as comment\n");
+                // printf("Treated as interactive comment\n");
                 continue;
             }
 
@@ -681,76 +786,10 @@ int main(int argc, char *argv[])
             arg_cnt = arg_parse(str4, arg_arr2, " ");
             solve(arg_arr2, arg_cnt);
 
-        } //while(1); //((len != -1));
+        } // while(1); //((len != -1));
     }
 
-    // do
-    // {
-    //     // ######################## Take user input ###########################
-    //     printf("wsh> ");
-    //     if ((len = getline(&input, &size, stdin)) == -1)
-    //         exit(0);
-
-    //     // remove new-line character that getline() reads by default
-    //     if (input[strlen(input) - 1] == '\n')
-    //     {
-    //         input[strlen(input) - 1] = '\0';
-    //     }
-
-    //     // ################## parse the input for spaces #######################
-    //     // make a deep copy of the user input
-    //     char *str1 = strdup(input);
-    //     char *arg_arr1[MAXARGS] = {NULL};
-    //     int arg_cnt = arg_parse(str1, arg_arr1, " ");
-
-    //     // ####################### Handle comments ###############################
-    //     char * comment_token = arg_arr1[0];
-    //     if(comment_token[0] == '#')
-    //     {
-    //         printf("Treated as comment\n");
-    //         continue;
-    //     }
-
-    //     // ################### handle variable substitution ######################
-    //     char *str5 = strdup(input);
-    //     char *sub_input = NULL;
-    //     for(int i=0; i<arg_cnt; i++)
-    //     {   char * temp_token = arg_arr1[i];
-    //         if(temp_token[0] == '$')
-    //         {
-    //             printf("$ encountered\n");
-    //             sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
-    //         }
-    //     }
-    //     if(sub_input == NULL)
-    //     {
-    //         sub_input = input;
-    //     }
-
-    //     // ################### handle history ###################
-    //     // create a deep copy of input
-    //     char *str2 = strdup(sub_input);
-    //     int used_history = 0;
-    //     char * actual_input = history_replace(str2, arg_arr1, arg_cnt, &used_history);
-
-    //     // only if needed record history
-    //     char *str3 = strdup(sub_input);
-    //     char input_copy[MAXLINE];
-    //     record_input(input_copy, str3);
-    //     if (used_history == 0)
-    //     {
-    //         record_history(input_copy, arg_arr1[0]);
-    //     }
-
-    //     // execute the needed command
-    //     // create a deep copy of input
-    //     char *str4 = strdup(actual_input);
-    //     char *arg_arr2[MAXARGS] = {NULL};
-    //     arg_cnt = arg_parse(str4, arg_arr2, " ");
-    //     solve(arg_arr2, arg_cnt);
-
-    // } while ((len != -1));
-
     free(input);
+    free_memory();
     return 0;
 }
