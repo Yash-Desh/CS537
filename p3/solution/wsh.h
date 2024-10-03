@@ -161,8 +161,7 @@ void record_history(char *arg, char *firstarg)
     printf("History has %d commands\n", Hcnt);
 }
 
-
-char * history_replace(char *str2, char ** input_tokens, int arg_cnt, int *flag)
+char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 {
     // step-1 parse the input_ptr
     // char *input_tokens[MAXARGS] = {NULL};
@@ -183,7 +182,7 @@ char * history_replace(char *str2, char ** input_tokens, int arg_cnt, int *flag)
                 ptr = ptr->next;
                 jumps--;
             }
-            char* str = strdup(ptr->command);
+            char *str = strdup(ptr->command);
             *flag = 1;
             return str;
         }
@@ -194,7 +193,8 @@ char * history_replace(char *str2, char ** input_tokens, int arg_cnt, int *flag)
         }
     }
 
-    else {
+    else
+    {
         // if command doesn't start with "history"
         return str2;
     }
@@ -224,6 +224,53 @@ int arg_parse(char *str, char **arg_arr, char *delims)
     // debug statement
     printf("tokenization done %d\n", arg_cnt);
     return arg_cnt;
+}
+
+// ################################### Variable Substitution ##################################
+char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
+{
+    arg_arr[pos]++;
+    printf("%s\n", arg_arr[pos]);
+    struct SNode *ptr = Sfirst;
+
+    // search in environment variables
+    char *env_var = NULL;
+    env_var = getenv(arg_arr[pos]);
+    if (env_var != NULL)
+    {
+        arg_arr[pos] = strdup(env_var);
+    }
+
+    // search in shell variables
+    else
+    {
+        while (ptr != NULL)
+        {
+            if (strcmp(ptr->key, arg_arr[pos]) == 0)
+            {
+                arg_arr[pos] = strdup(ptr->value);
+                break;
+            }
+            ptr = ptr->next;
+        }
+    }
+    // if word not found then ptr would reach the end of shell variables linked list
+    if (ptr != NULL || env_var != NULL)
+    {
+        char *modified = (char *)malloc(MAXLINE * sizeof(char *));
+        strcpy(modified, arg_arr[0]);
+        for (int i = 1; i < arg_cnt; i++)
+        {
+            strcat(modified, " ");
+            strcat(modified, arg_arr[i]);
+        }
+        printf("New command becomes %s\n", modified);
+        return modified;
+    }
+    else
+    {
+        return str;
+    }
 }
 
 // ######################################### Built-in #############################################
@@ -349,9 +396,7 @@ void builtin_history()
     }
 }
 
-
-
-void solve(char ** arg_arr, int arg_cnt)
+void solve(char **arg_arr, int arg_cnt)
 {
     // ######################### old stuff commented ######################
     // flag to denote if history was used
@@ -419,7 +464,7 @@ void solve(char ** arg_arr, int arg_cnt)
         {
             change_history_size(arg_arr[2]);
         }
-        else if(arg_cnt == 1)
+        else if (arg_cnt == 1)
         {
             builtin_history();
         }

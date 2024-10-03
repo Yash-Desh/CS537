@@ -58,18 +58,40 @@ int main(int argc, char *argv[])
         char *arg_arr1[MAXARGS] = {NULL};
         int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
-        // ################### handle variable substitution ######################
 
+        // ####################### Handle comments ###############################
+        char * comment_token = arg_arr1[0];
+        if(comment_token[0] == '#')
+        {
+            printf("Treated as comment\n");
+            continue;
+        }
+
+        // ################### handle variable substitution ######################
+        char *str5 = strdup(input);
+        char *sub_input = NULL;
+        for(int i=0; i<arg_cnt; i++)
+        {   char * temp_token = arg_arr1[i];
+            if(temp_token[0] == '$')
+            {
+                printf("$ encountered\n");
+                sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
+            }
+        }
+        if(sub_input == NULL)
+        {
+            sub_input = input;
+        }
 
 
         // ################### handle history ###################
         // create a deep copy of input
-        char *str2 = strdup(input);
+        char *str2 = strdup(sub_input);
         int used_history = 0;
         char * actual_input = history_replace(str2, arg_arr1, arg_cnt, &used_history);
 
         // only if needed record history
-        char *str3 = strdup(input);
+        char *str3 = strdup(sub_input);
         char input_copy[MAXLINE];
         record_input(input_copy, str3);
         if (used_history == 0)
