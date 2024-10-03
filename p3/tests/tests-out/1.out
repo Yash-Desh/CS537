@@ -1,10 +1,2 @@
-Linux
-Interactive Mode On
-wsh> tokenization done 1
-In record_history str is: uname
-before prune history
-after prune history
-History has 1 commands
-hello, I am parent of 1948156 (wc:1948156) (pid:1948155)
-wsh> tokenization done 1
-In record_history str is: exit
+wsh> Linux
+wsh> 
