@@ -442,7 +442,7 @@ void redirection(char ** arg_arr, int arg_cnt)
         close(file_desc);
     }
     
-    else if(temp[0] == '<' )
+    else if(temp[0] == '<')
     {
         char *temp2 = temp+1;
         file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
@@ -460,6 +460,22 @@ void redirection(char ** arg_arr, int arg_cnt)
         // 0777 grants read, write, and execute permissions to everyone
         file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
         dup2(file_desc, STDOUT_FILENO);
+
+        // set the file name to NULL
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
+    }
+
+    else if(temp[1] == '>')
+    {
+        // lose the > operator
+        char *temp2 = temp+2;
+
+        // subtracted the ASCII value of 0
+        int fd = temp[0]-'0';
+        // 0777 grants read, write, and execute permissions to everyone
+        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        dup2(file_desc, fd);
 
         // set the file name to NULL
         arg_arr[arg_cnt-1] = NULL;

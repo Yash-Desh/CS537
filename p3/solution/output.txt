@@ -19,3 +19,10 @@ Enter number : You entered : 10
 Enter number : You entered : 10
 Enter number : You entered : 10
 Sum = 50
+THIS IS ERROR
+Enter number : You entered : 12
+Enter number : You entered : 12
+Enter number : You entered : 12
+Enter number : You entered : 12
+Enter number : You entered : 12
+Sum = 60
