@@ -438,8 +438,8 @@ void redirection(char ** arg_arr, int arg_cnt)
         dup2(file_desc, STDOUT_FILENO);
 
         // set the file name to NULL
-        // arg_arr[arg_cnt-1] = NULL;
-        // close(file_desc);
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
     }
     
     else if(temp[0] == '<' )
@@ -449,8 +449,8 @@ void redirection(char ** arg_arr, int arg_cnt)
         dup2(file_desc, STDIN_FILENO);
 
         // set the file name to NULL
-        // arg_arr[arg_cnt-1] = NULL;
-        // close(file_desc);
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
     }
 
     else if(temp[0] == '>')
@@ -462,8 +462,8 @@ void redirection(char ** arg_arr, int arg_cnt)
         dup2(file_desc, STDOUT_FILENO);
 
         // set the file name to NULL
-        // arg_arr[arg_cnt-1] = NULL;
-        // close(file_desc);
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
     }
 
     else if(temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
@@ -475,8 +475,8 @@ void redirection(char ** arg_arr, int arg_cnt)
         dup2(file_desc, STDERR_FILENO);
 
         // set the file name to NULL
-        // arg_arr[arg_cnt-1] = NULL;
-        // close(file_desc);
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
     }
 
     // Redirecting Standard Output and Standard Error at once
@@ -489,11 +489,12 @@ void redirection(char ** arg_arr, int arg_cnt)
         dup2(file_desc, STDERR_FILENO);
 
         // set the file name to NULL
-        // arg_arr[arg_cnt-1] = NULL;
-        // close(file_desc);
+        arg_arr[arg_cnt-1] = NULL;
+        close(file_desc);
     }
-    arg_arr[arg_cnt-1] = NULL;
-    close(file_desc);
+    // arg_arr[arg_cnt-1] = NULL;
+    // close(file_desc);
+
 
     
     // free(temp);
@@ -807,9 +808,6 @@ int main(int argc, char *argv[])
                 // printf("Treated as batch comment\n");
                 continue;
             }
-
-            // ################### handle redirection ######################
-            // for(int i=0; i<)
 
             // ################### handle variable substitution ######################
             char *str5 = strdup(input);
