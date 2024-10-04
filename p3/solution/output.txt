@@ -1,0 +1,21 @@
+THIS IS ERROR
+Enter number : You entered : 1
+Enter number : You entered : 2
+Enter number : You entered : 3
+Enter number : You entered : 4
+Enter number : You entered : 5
+Sum = 15
+THIS IS ERROR
+Enter number : You entered : 1
+Enter number : You entered : 2
+Enter number : You entered : 3
+Enter number : You entered : 4
+Enter number : You entered : 5
+Sum = 15
+THIS IS ERROR
+Enter number : You entered : 10
+Enter number : You entered : 10
+Enter number : You entered : 10
+Enter number : You entered : 10
+Enter number : You entered : 10
+Sum = 50

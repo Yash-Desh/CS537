@@ -5,6 +5,7 @@
 #include <dirent.h>   // for readdir()
 #include <unistd.h>   // for system calls
 #include <sys/wait.h> // for wait()
+#include <fcntl.h>    // for redirection
 #include "wsh.h"
 
 // Piazza @226
@@ -335,13 +336,6 @@ void builtin_cd(char **arg_arr)
     }
 }
 
-// void builtin_export(char *env_var, char **environ, int *environ_len)
-// {
-//     environ[*environ_len] = env_var;
-//     (*environ_len)++;
-//     printf("Number of environment variables = %d\n", *environ_len);
-// }
-
 void builtin_local(char *arg, int *shellvars_len)
 {
     // check if variable is already present in list
@@ -421,6 +415,137 @@ void builtin_history()
         hptr = hptr->next;
     }
 }
+
+
+// ################### handle redirection ######################
+void redirection(char ** arg_arr, int arg_cnt)
+{
+    // parameters : space seperated array of tokens, number of tokens
+
+    // case : redirection token is always the last one on the command line
+    char *temp = strdup(arg_arr[arg_cnt-1]);
+
+    // file descriptor declared
+    int file_desc=-1;
+
+    // case : redirect stdout
+    if(temp[0] == '>' && temp[1] == '>')
+    {
+        // lose the >> operator
+        char *temp2 = temp+2;
+        
+        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+        dup2(file_desc, STDOUT_FILENO);
+
+        // set the file name to NULL
+        // arg_arr[arg_cnt-1] = NULL;
+        // close(file_desc);
+    }
+    
+    else if(temp[0] == '<' )
+    {
+        char *temp2 = temp+1;
+        file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+        dup2(file_desc, STDIN_FILENO);
+
+        // set the file name to NULL
+        // arg_arr[arg_cnt-1] = NULL;
+        // close(file_desc);
+    }
+
+    else if(temp[0] == '>')
+    {
+        // lose the > operator
+        char *temp2 = temp+1;
+        // 0777 grants read, write, and execute permissions to everyone
+        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        dup2(file_desc, STDOUT_FILENO);
+
+        // set the file name to NULL
+        // arg_arr[arg_cnt-1] = NULL;
+        // close(file_desc);
+    }
+
+    else if(temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
+    {
+        // lose the &> operator
+        char *temp2 = temp+3;
+        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+        dup2(file_desc, STDOUT_FILENO);
+        dup2(file_desc, STDERR_FILENO);
+
+        // set the file name to NULL
+        // arg_arr[arg_cnt-1] = NULL;
+        // close(file_desc);
+    }
+
+    // Redirecting Standard Output and Standard Error at once
+    else if(temp[0] == '&' && temp[1] == '>')
+    {
+        // lose the &> operator
+        char *temp2 = temp+2;
+        file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
+        dup2(file_desc, STDOUT_FILENO);
+        dup2(file_desc, STDERR_FILENO);
+
+        // set the file name to NULL
+        // arg_arr[arg_cnt-1] = NULL;
+        // close(file_desc);
+    }
+    arg_arr[arg_cnt-1] = NULL;
+    close(file_desc);
+
+    
+    // free(temp);
+    // for (int i = 0; input[i] != '\0'; i++)
+            // {
+            //     if (input[i] == '>')
+            //     {
+            //         char *redir = strdup(input);
+            //         // parse the argument to local
+            //         char *temp[2];
+            //         int parse_cnt = arg_parse(redir, temp, ">");
+            //         if (parse_cnt == 2)
+            //         {
+            //             // if (input[i + 1] == '>')
+            //             // {
+            //             //     // redirection type : >>
+            //             // }
+            //             // else
+            //             // {
+            //             // redirection type : >
+            //             int file_desc = open(temp[1], O_CREAT | O_WRONLY);
+            //             int fd = dup2(file_desc, STDOUT_FILENO);
+            //             // }
+            //         }
+            //     }
+            //     // else if (input[i] == '<')
+            //     // {
+            //     //     if (input[i + 1] == '')
+            //     //     {
+            //     //         // redirection type : >>
+            //     //     }
+            //     //     else
+            //     //     {
+            //     //         // redirection type : >
+            //     //     }
+            //     // }
+            //     // else if (input[i] == '&')
+            //     // {
+            //     //     if (input[i + 1] == '>')
+            //     //     {
+            //     //         // redirection type : &>
+            //     //     }
+            //     //     else if (input[i + 2] == '>')
+            //     //     {
+            //     //         // redirection type : &<<
+            //     //     }
+            //     // }
+            // }
+}
+
+// ################################### main solver function #######################################
+
 
 void solve(char **arg_arr, int arg_cnt)
 {
@@ -504,11 +629,13 @@ void solve(char **arg_arr, int arg_cnt)
             // child (new process)
             // printf("hello, I am child (pid:%d)\n", (int)getpid());
             char *myargs[arg_cnt + 1];
+            
             for (int i = 0; i < arg_cnt; i++)
             {
                 myargs[i] = arg_arr[i];
             }
             myargs[arg_cnt] = NULL;   // marks end of array
+            redirection(myargs, arg_cnt);
             execv(myargs[0], myargs); // runs word count
             printf("this shouldn't print out\n");
             // kill the child if the execv failed
@@ -544,6 +671,8 @@ void solve(char **arg_arr, int arg_cnt)
             }
             myargs[arg_cnt] = NULL; // marks end of array
 
+
+            redirection(myargs, arg_cnt);
             // pointer to path string
             char *path;
             // path variable has the entire path string now.
@@ -574,7 +703,7 @@ void solve(char **arg_arr, int arg_cnt)
             // printf("%s\n", path);
 
             // check errno & perror
-            printf("%s: command not found\n", myargs[0]);
+            // printf("%s: command not found\n", myargs[0]);
             // in case failed exec, the child needs to be killed
             exit(1);
         }
@@ -589,26 +718,25 @@ void solve(char **arg_arr, int arg_cnt)
     }
 }
 
-
 void free_memory()
 {
     // free history linked list
-    struct HNode* hprev=NULL;
-    while(Hfirst != NULL)
+    struct HNode *hprev = NULL;
+    while (Hfirst != NULL)
     {
         hprev = Hfirst;
         Hfirst = Hfirst->next;
         free(hprev);
-    } 
+    }
 
     // free shell variables linked list
-    struct SNode* sprev=NULL;
-    while(Sfirst != NULL)
+    struct SNode *sprev = NULL;
+    while (Sfirst != NULL)
     {
         sprev = Sfirst;
         Sfirst = Sfirst->next;
         free(sprev);
-    } 
+    }
     // printf("freed memory\n");
 }
 
@@ -616,6 +744,11 @@ void free_memory()
 // // constraints on the input like command length and number of arguments
 // #define MAXLINE 1024
 // #define MAXARGS 128
+
+// #####################################################################################
+// #####################################################################################
+// #####################################################################################
+// #####################################################################################
 
 int main(int argc, char *argv[])
 {
@@ -640,10 +773,10 @@ int main(int argc, char *argv[])
         FILE *file_ptr = NULL;
         file_ptr = fopen(argv[1], "r");
         // printf("Entered Batch mode\n");
-        //while ((len = getline(&input, &size, file_ptr)) != -1)
-        while(1)
+        // while ((len = getline(&input, &size, file_ptr)) != -1)
+        while (1)
         {
-            
+
             // ######################## Take user input ###########################
             // printf("wsh> ");
             // fflush(stdout);
@@ -664,7 +797,7 @@ int main(int argc, char *argv[])
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
             // ######################## Handle spaces/newlines in files ######################
-            if(arg_cnt == 0)
+            if (arg_cnt == 0)
                 continue;
 
             // ####################### Handle comments ###############################
@@ -674,6 +807,9 @@ int main(int argc, char *argv[])
                 // printf("Treated as batch comment\n");
                 continue;
             }
+
+            // ################### handle redirection ######################
+            // for(int i=0; i<)
 
             // ################### handle variable substitution ######################
             char *str5 = strdup(input);
@@ -739,6 +875,10 @@ int main(int argc, char *argv[])
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
+            // ######################## Handle spaces/newlines in files ######################
+            if (arg_cnt == 0)
+                continue;
+
             // ####################### Handle comments ###############################
             char *comment_token = arg_arr1[0];
             if (comment_token[0] == '#')
@@ -746,6 +886,10 @@ int main(int argc, char *argv[])
                 // printf("Treated as interactive comment\n");
                 continue;
             }
+
+            
+
+
 
             // ################### handle variable substitution ######################
             char *str5 = strdup(input);
@@ -759,6 +903,7 @@ int main(int argc, char *argv[])
                     sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
                 }
             }
+            // if no $ encountered
             if (sub_input == NULL)
             {
                 sub_input = input;
