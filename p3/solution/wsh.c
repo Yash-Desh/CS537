@@ -347,9 +347,17 @@ void builtin_local(char *arg, int *shellvars_len)
         temp[1] = " ";
     }
 
+    // check for variable substitution
+    if(temp[1][0] == '$')
+    {
+        printf("$ encountered in local command\n");
+        variable_sub(1, temp, cnt, temp[0]);
+    }
+
+    // if shell variable is already present
     while (ptr != NULL)
     {
-        // if shell variable is already present
+        
         if (strcmp(ptr->key, temp[0]) == 0)
         {
             ptr->value = strdup(temp[1]);
