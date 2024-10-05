@@ -52,12 +52,25 @@ int Hsize = 5;
 
 void prune_history(int history_size, int history_cnt, int func_flag)
 {
+    // Corner case : history size = 1, history count = 1, prune_history() called from record_history()
+    if(history_size ==1 && history_cnt==1 && func_flag==1)
+    {
+        free(Hfirst);
+        Hfirst = NULL;
+        Hcnt=0;
+        return;
+    }
+
+
     // if history has 5 elements, make 3 jumps to reach 4th element
     int jumps = 0;
+
+    // prune called from "history set <n>" command
     if (func_flag == 0)
     {
         jumps = history_size - 1;
     }
+    // history size full
     else
     {
         jumps = history_size - 2;
@@ -66,6 +79,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
     // remove the extra elements
     if (history_cnt >= history_size)
     {
+        // mechanism to jump nodes
         struct HNode *ptr = Hfirst;
         while (Hfirst != NULL && jumps > 0)
         {
@@ -87,6 +101,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
         if (func_flag == 0)
         {
             Hcnt = history_size;
+            // printf("history cnt is now %d\n", Hcnt);
         }
         else
         {
@@ -100,7 +115,7 @@ void change_history_size(char *n)
     int newsize = atoi(n);
     Hsize = newsize;
     prune_history(newsize, Hcnt, 0);
-    printf("History size changed to %d\n", Hsize);
+    // printf("History size changed to %d\n", Hsize);
 }
 
 void record_history(char *arg, char *firstarg)
