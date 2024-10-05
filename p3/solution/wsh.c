@@ -416,153 +416,136 @@ void builtin_history()
     }
 }
 
-
 // ################### handle redirection ######################
-void redirection(char ** arg_arr, int arg_cnt)
+void redirection(char **arg_arr, int arg_cnt)
 {
     // parameters : space seperated array of tokens, number of tokens
 
     // case : redirection token is always the last one on the command line
-    char *temp = strdup(arg_arr[arg_cnt-1]);
+    char *temp = strdup(arg_arr[arg_cnt - 1]);
 
     // file descriptor declared
-    int file_desc=-1;
+    int file_desc = -1;
 
     // case : redirect stdout
-    if(temp[0] == '>' && temp[1] == '>')
+    if (temp[0] == '<')
     {
-        // lose the >> operator
-        char *temp2 = temp+2;
-        
-        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
-        dup2(file_desc, STDOUT_FILENO);
-
-        // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
-        close(file_desc);
-    }
-    
-    else if(temp[0] == '<')
-    {
-        char *temp2 = temp+1;
+        char *temp2 = temp + 1;
         file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
         dup2(file_desc, STDIN_FILENO);
 
         // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
+        arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
     }
 
-    else if(temp[0] == '>')
+    else if(temp[1] == '<')
+    {
+        char *temp2 = temp + 2;
+        int fd = temp[0] - '0';
+        file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+        dup2(file_desc, fd);
+
+        // set the file name to NULL
+        arg_arr[arg_cnt - 1] = NULL;
+        close(file_desc);
+    }
+
+    else if (temp[0] == '>' && temp[1] == '>')
+    {
+        // lose the >> operator
+        char *temp2 = temp + 2;
+
+        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+        dup2(file_desc, STDOUT_FILENO);
+
+        // set the file name to NULL
+        arg_arr[arg_cnt - 1] = NULL;
+        close(file_desc);
+    }
+
+    else if (temp[0] == '>')
     {
         // lose the > operator
-        char *temp2 = temp+1;
+        char *temp2 = temp + 1;
         // 0777 grants read, write, and execute permissions to everyone
         file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
         dup2(file_desc, STDOUT_FILENO);
 
         // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
+        arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
     }
 
-    else if(temp[1] == '>')
-    {
-        // lose the > operator
-        char *temp2 = temp+2;
+    
 
-        // subtracted the ASCII value of 0
-        int fd = temp[0]-'0';
-        // 0777 grants read, write, and execute permissions to everyone
-        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-        dup2(file_desc, fd);
 
-        // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
-        close(file_desc);
-    }
-
-    else if(temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
+    else if (temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
     {
         // lose the &> operator
-        char *temp2 = temp+3;
+        char *temp2 = temp + 3;
         file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
         dup2(file_desc, STDOUT_FILENO);
         dup2(file_desc, STDERR_FILENO);
 
         // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
+        arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
     }
 
+    else if (temp[1] == '>' && temp[2] == '>')
+    {
+        // lose the > operator
+        char *temp2 = temp + 3;
+
+        // subtracted the ASCII value of 0
+        int fd = temp[0] - '0';
+        // 0777 grants read, write, and execute permissions to everyone
+        file_desc = open(temp2, O_CREAT | O_WRONLY | O_APPEND, 0777);
+        dup2(file_desc, fd);
+
+        // set the file name to NULL
+        arg_arr[arg_cnt - 1] = NULL;
+        close(file_desc);
+    }
+
+    
+
     // Redirecting Standard Output and Standard Error at once
-    else if(temp[0] == '&' && temp[1] == '>')
+    else if (temp[0] == '&' && temp[1] == '>')
     {
         // lose the &> operator
-        char *temp2 = temp+2;
+        char *temp2 = temp + 2;
         file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
         dup2(file_desc, STDOUT_FILENO);
         dup2(file_desc, STDERR_FILENO);
 
         // set the file name to NULL
-        arg_arr[arg_cnt-1] = NULL;
+        arg_arr[arg_cnt - 1] = NULL;
+        close(file_desc);
+    }
+
+
+    else if (temp[1] == '>')
+    {
+        // lose the > operator
+        char *temp2 = temp + 2;
+
+        // subtracted the ASCII value of 0
+        int fd = temp[0] - '0';
+        // 0777 grants read, write, and execute permissions to everyone
+        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        dup2(file_desc, fd);
+
+        // set the file name to NULL
+        arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
     }
     // arg_arr[arg_cnt-1] = NULL;
     // close(file_desc);
-
-
-    
-    // free(temp);
-    // for (int i = 0; input[i] != '\0'; i++)
-            // {
-            //     if (input[i] == '>')
-            //     {
-            //         char *redir = strdup(input);
-            //         // parse the argument to local
-            //         char *temp[2];
-            //         int parse_cnt = arg_parse(redir, temp, ">");
-            //         if (parse_cnt == 2)
-            //         {
-            //             // if (input[i + 1] == '>')
-            //             // {
-            //             //     // redirection type : >>
-            //             // }
-            //             // else
-            //             // {
-            //             // redirection type : >
-            //             int file_desc = open(temp[1], O_CREAT | O_WRONLY);
-            //             int fd = dup2(file_desc, STDOUT_FILENO);
-            //             // }
-            //         }
-            //     }
-            //     // else if (input[i] == '<')
-            //     // {
-            //     //     if (input[i + 1] == '')
-            //     //     {
-            //     //         // redirection type : >>
-            //     //     }
-            //     //     else
-            //     //     {
-            //     //         // redirection type : >
-            //     //     }
-            //     // }
-            //     // else if (input[i] == '&')
-            //     // {
-            //     //     if (input[i + 1] == '>')
-            //     //     {
-            //     //         // redirection type : &>
-            //     //     }
-            //     //     else if (input[i + 2] == '>')
-            //     //     {
-            //     //         // redirection type : &<<
-            //     //     }
-            //     // }
-            // }
 }
 
 // ################################### main solver function #######################################
-
 
 void solve(char **arg_arr, int arg_cnt)
 {
@@ -646,12 +629,12 @@ void solve(char **arg_arr, int arg_cnt)
             // child (new process)
             // printf("hello, I am child (pid:%d)\n", (int)getpid());
             char *myargs[arg_cnt + 1];
-            
+
             for (int i = 0; i < arg_cnt; i++)
             {
                 myargs[i] = arg_arr[i];
             }
-            myargs[arg_cnt] = NULL;   // marks end of array
+            myargs[arg_cnt] = NULL; // marks end of array
             redirection(myargs, arg_cnt);
             execv(myargs[0], myargs); // runs word count
             printf("this shouldn't print out\n");
@@ -687,7 +670,6 @@ void solve(char **arg_arr, int arg_cnt)
                 myargs[i] = arg_arr[i];
             }
             myargs[arg_cnt] = NULL; // marks end of array
-
 
             redirection(myargs, arg_cnt);
             // pointer to path string
@@ -900,10 +882,6 @@ int main(int argc, char *argv[])
                 // printf("Treated as interactive comment\n");
                 continue;
             }
-
-            
-
-
 
             // ################### handle variable substitution ######################
             char *str5 = strdup(input);
