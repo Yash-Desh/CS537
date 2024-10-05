@@ -53,14 +53,13 @@ int Hsize = 5;
 void prune_history(int history_size, int history_cnt, int func_flag)
 {
     // Corner case : history size = 1, history count = 1, prune_history() called from record_history()
-    if(history_size ==1 && history_cnt==1 && func_flag==1)
+    if (history_size == 1 && history_cnt == 1 && func_flag == 1)
     {
         free(Hfirst);
         Hfirst = NULL;
-        Hcnt=0;
+        Hcnt = 0;
         return;
     }
-
 
     // if history has 5 elements, make 3 jumps to reach 4th element
     int jumps = 0;
@@ -135,7 +134,7 @@ void record_history(char *arg, char *firstarg)
     }
 
     // remove the extra elements
-    
+
     // printf("before prune history\n");
     prune_history(Hsize, Hcnt, 1);
     // printf("after prune history\n");
@@ -341,15 +340,16 @@ void builtin_local(char *arg, int *shellvars_len)
     char *temp[2];
     int cnt = arg_parse(arg, temp, "=");
 
-    // handle empty shell variable assignments 
-    if(cnt != 2)
+    // handle empty shell variable assignments
+    if (cnt != 2)
     {
         temp[1] = " ";
     }
 
     // check for variable substitution
-    if(temp[1][0] == '$')
+    if (temp[1][0] == '$')
     {
+        // tokenize for :
         printf("$ encountered in local command\n");
         variable_sub(1, temp, cnt, temp[0]);
     }
@@ -357,7 +357,7 @@ void builtin_local(char *arg, int *shellvars_len)
     // if shell variable is already present
     while (ptr != NULL)
     {
-        
+
         if (strcmp(ptr->key, temp[0]) == 0)
         {
             ptr->value = strdup(temp[1]);
@@ -428,9 +428,11 @@ void builtin_history()
 }
 
 // ################### handle redirection ######################
-void redirection(char **arg_arr, int arg_cnt)
+int redirection(char **arg_arr, int arg_cnt)
 {
     // parameters : space seperated array of tokens, number of tokens
+    // return : 1=redirection successful
+    //          0=redirection unsuccessful
 
     // case : redirection token is always the last one on the command line
     char *temp = strdup(arg_arr[arg_cnt - 1]);
@@ -448,9 +450,10 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
 
-    else if(temp[1] == '<')
+    else if (temp[1] == '<')
     {
         char *temp2 = temp + 2;
         int fd = temp[0] - '0';
@@ -460,6 +463,7 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
 
     else if (temp[0] == '>' && temp[1] == '>')
@@ -473,6 +477,7 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
 
     else if (temp[0] == '>')
@@ -486,10 +491,8 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
-
-    
-
 
     else if (temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
     {
@@ -502,6 +505,7 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
 
     else if (temp[1] == '>' && temp[2] == '>')
@@ -518,9 +522,8 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
-
-    
 
     // Redirecting Standard Output and Standard Error at once
     else if (temp[0] == '&' && temp[1] == '>')
@@ -534,8 +537,8 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
-
 
     else if (temp[1] == '>')
     {
@@ -551,9 +554,14 @@ void redirection(char **arg_arr, int arg_cnt)
         // set the file name to NULL
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
+        return 1;
     }
     // arg_arr[arg_cnt-1] = NULL;
     // close(file_desc);
+    else
+    {
+        return 0;
+    }
 }
 
 // ################################### main solver function #######################################
@@ -611,6 +619,19 @@ void solve(char **arg_arr, int arg_cnt)
         {
             change_history_size(arg_arr[2]);
         }
+        else if (arg_cnt == 2)
+        {
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            if (redirection(arg_arr, arg_cnt))
+            {
+                builtin_history();
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
+            }
+            close(saved_stdout);
+            close(saved_stderr);
+        }
         else if (arg_cnt == 1)
         {
             builtin_history();
@@ -618,9 +639,26 @@ void solve(char **arg_arr, int arg_cnt)
     }
 
     // ls built-in command
-    else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt == 1))
+    else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt <= 2))
     {
-        builtin_ls();
+        if (arg_cnt == 2)
+        {
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            if (redirection(arg_arr, arg_cnt))
+            {
+                builtin_ls();
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
+            }
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+
+        else if (arg_cnt == 1)
+        {
+            builtin_ls();
+        }
     }
 
     // ################################### Path based #################################

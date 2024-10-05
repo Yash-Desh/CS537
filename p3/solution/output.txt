@@ -1,13 +1,15 @@
-Enter number : You entered : 1
-Enter number : You entered : 2
-Enter number : You entered : 3
-Enter number : You entered : 4
-Enter number : You entered : 5
-Sum = 15
-THIS IS ERROR
-Enter number : You entered : 6
-Enter number : You entered : 7
-Enter number : You entered : 8
-Enter number : You entered : 9
-Enter number : You entered : 10
-Sum = 40
+Makefile
+Nnum
+Nnum.c
+input.txt
+output.txt
+script.wsh
+test
+test.c
+testfolder
+wsh
+wsh-dbg
+wsh.c
+wsh.h
+1) uname
+2) ps
