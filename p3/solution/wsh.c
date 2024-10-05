@@ -135,21 +135,7 @@ void record_history(char *arg, char *firstarg)
     }
 
     // remove the extra elements
-    // if (Hcnt >= Hsize)
-    // {
-    //     struct HNode *ptr = Hfirst;
-    //     while (Hfirst != NULL && ptr->next->next != NULL)
-    //     {
-    //         ptr = ptr->next;
-    //     }
-    //     // temp node to point on the last node
-    //     struct HNode *temp = ptr->next;
-    //     // space created to add new node
-    //     ptr->next = NULL;
-    //     // free last node memory
-    //     free(temp);
-
-    // }
+    
     // printf("before prune history\n");
     prune_history(Hsize, Hcnt, 1);
     // printf("after prune history\n");
@@ -160,20 +146,15 @@ void record_history(char *arg, char *firstarg)
     // temp->command = arg;
     temp->next = NULL;
 
+    // case : History Empty
     if (Hfirst == NULL)
     {
         Hfirst = temp;
     }
-    else
+    else // case History Not Empty
     {
         temp->next = Hfirst;
         Hfirst = temp;
-        // struct HNode *hptr = Hfirst;
-        // while(hptr->next != NULL)
-        // {
-        //     hptr = hptr->next;
-        // }
-        // hptr->next = temp;
     }
     Hcnt++;
     // printf("History has %d commands\n", Hcnt);
@@ -358,10 +339,17 @@ void builtin_local(char *arg, int *shellvars_len)
 
     // parse the argument to local
     char *temp[2];
-    arg_parse(arg, temp, "=");
+    int cnt = arg_parse(arg, temp, "=");
+
+    // handle empty shell variable assignments 
+    if(cnt != 2)
+    {
+        temp[1] = " ";
+    }
 
     while (ptr != NULL)
     {
+        // if shell variable is already present
         if (strcmp(ptr->key, temp[0]) == 0)
         {
             ptr->value = strdup(temp[1]);
