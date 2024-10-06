@@ -284,27 +284,52 @@ int redirection(char **arg_arr, int arg_cnt)
     // case : redirection token is always the last one on the command line
     char *temp = strdup(arg_arr[arg_cnt - 1]);
 
-    // file descriptor declared
+    // position of the 1st redirection symbol
+    int pos = 0;
+    for (int i = 0; temp[i] != '\0'; i++)
+    {
+        if (temp[i] == '>' || temp[i] == '<' || temp[i] == '&')
+        {
+            pos = i;
+            break;
+        }
+    }
+
+    int n = -1;
+    char num_strg[1024];
+    // copy the number into num_strg
+    // get its integer format
+    if (pos != 0)
+    {
+        for (int i = 0; i < pos; i++)
+        {
+            num_strg[i] = temp[i];
+        }
+        num_strg[pos] = '\0';
+        n = atoi(num_strg);
+        
+    }
+
+    // file descriptor of new file
     int file_desc = -1;
+    // file descriptor of old file
+    int fd = -1;
+
+    char *temp2 = NULL;
 
     // case : redirect stdout
-    if (temp[0] == '<')
+    if (temp[pos] == '<')
     {
-        char *temp2 = temp + 1;
+        temp2 = temp + pos + 1;
         file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
-        dup2(file_desc, STDIN_FILENO);
-
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-
-    else if (temp[1] == '<')
-    {
-        char *temp2 = temp + 2;
-        int fd = temp[0] - '0';
-        file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+        if (pos == 0)
+        {
+            fd = STDIN_FILENO;
+        }
+        else if (pos != 0)
+        {
+            fd = n;
+        }
         dup2(file_desc, fd);
 
         // set the file name to NULL
@@ -313,39 +338,18 @@ int redirection(char **arg_arr, int arg_cnt)
         return 1;
     }
 
-    else if (temp[0] == '>' && temp[1] == '>')
+    else if (temp[pos] == '&')
     {
-        // lose the >> operator
-        char *temp2 = temp + 2;
-
-        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
-        dup2(file_desc, STDOUT_FILENO);
-
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-
-    else if (temp[0] == '>')
-    {
-        // lose the > operator
-        char *temp2 = temp + 1;
-        // 0777 grants read, write, and execute permissions to everyone
-        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-        dup2(file_desc, STDOUT_FILENO);
-
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-
-    else if (temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
-    {
-        // lose the &> operator
-        char *temp2 = temp + 3;
-        file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+        if (temp[pos + 1] == '>' && temp[pos + 2] == '>')
+        {
+            temp2 = temp + 3;
+            file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+        }
+        else if (temp[pos + 1] == '>')
+        {
+            temp2 = temp + 2;
+            file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
+        }
         dup2(file_desc, STDOUT_FILENO);
         dup2(file_desc, STDERR_FILENO);
 
@@ -355,15 +359,36 @@ int redirection(char **arg_arr, int arg_cnt)
         return 1;
     }
 
-    else if (temp[1] == '>' && temp[2] == '>')
+    else if (temp[pos] == '>')
     {
-        // lose the > operator
-        char *temp2 = temp + 3;
-
-        // subtracted the ASCII value of 0
-        int fd = temp[0] - '0';
-        // 0777 grants read, write, and execute permissions to everyone
-        file_desc = open(temp2, O_CREAT | O_WRONLY | O_APPEND, 0777);
+        if (pos == 0)
+        {
+            if (temp[pos] == '>' && temp[pos + 1] == '>')
+            {
+                temp2 = temp + 2;
+                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+            }
+            else if (temp[pos] == '>')
+            {
+                temp2 = temp + 1;
+                file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+            }
+            fd = STDOUT_FILENO;
+        }
+        else if (pos != 0)
+        {
+            if (temp[pos] == '>' && temp[pos + 1] == '>')
+            {
+                temp2 = temp + pos + 2;
+                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+            }
+            else if (temp[pos] == '>')
+            {
+                temp2 = temp + pos + 1;
+                file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+            }
+            fd = n;
+        }
         dup2(file_desc, fd);
 
         // set the file name to NULL
@@ -372,39 +397,111 @@ int redirection(char **arg_arr, int arg_cnt)
         return 1;
     }
 
-    // Redirecting Standard Output and Standard Error at once
-    else if (temp[0] == '&' && temp[1] == '>')
-    {
-        // lose the &> operator
-        char *temp2 = temp + 2;
-        file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
-        dup2(file_desc, STDOUT_FILENO);
-        dup2(file_desc, STDERR_FILENO);
+    // else if (temp[1] == '<')
+    // {
+    //     char *temp2 = temp + 2;
+    //     int fd = temp[0] - '0';
+    //     file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+    //     dup2(file_desc, fd);
 
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
 
-    else if (temp[1] == '>')
-    {
-        // lose the > operator
-        char *temp2 = temp + 2;
+    // else if (temp[0] == '>' && temp[1] == '>')
+    // {
+    //     // lose the >> operator
+    //     char *temp2 = temp + 2;
 
-        // subtracted the ASCII value of 0
-        int fd = temp[0] - '0';
-        // 0777 grants read, write, and execute permissions to everyone
-        file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-        dup2(file_desc, fd);
+    //     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+    //     dup2(file_desc, STDOUT_FILENO);
 
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-    // arg_arr[arg_cnt-1] = NULL;
-    // close(file_desc);
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+
+    // else if (temp[0] == '>')
+    // {
+    //     // lose the > operator
+    //     char *temp2 = temp + 1;
+    //     // 0777 grants read, write, and execute permissions to everyone
+    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+    //     dup2(file_desc, STDOUT_FILENO);
+
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+
+    // else if (temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
+    // {
+    //     // lose the &> operator
+    //     char *temp2 = temp + 3;
+    //     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+    //     dup2(file_desc, STDOUT_FILENO);
+    //     dup2(file_desc, STDERR_FILENO);
+
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+
+    // else if (temp[1] == '>' && temp[2] == '>')
+    // {
+    //     // lose the > operator
+    //     char *temp2 = temp + 3;
+
+    //     // subtracted the ASCII value of 0
+    //     int fd = temp[0] - '0';
+    //     // 0777 grants read, write, and execute permissions to everyone
+    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_APPEND, 0777);
+    //     dup2(file_desc, fd);
+
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+
+    // // Redirecting Standard Output and Standard Error at once
+    // else if (temp[0] == '&' && temp[1] == '>')
+    // {
+    //     // lose the &> operator
+    //     char *temp2 = temp + 2;
+    //     file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
+    //     dup2(file_desc, STDOUT_FILENO);
+    //     dup2(file_desc, STDERR_FILENO);
+
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+
+    // else if (temp[1] == '>')
+    // {
+    //     // lose the > operator
+    //     char *temp2 = temp + 2;
+
+    //     // subtracted the ASCII value of 0
+    //     int fd = temp[0] - '0';
+    //     // 0777 grants read, write, and execute permissions to everyone
+    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+    //     dup2(file_desc, fd);
+
+    //     // set the file name to NULL
+    //     arg_arr[arg_cnt - 1] = NULL;
+    //     close(file_desc);
+    //     return 1;
+    // }
+    // // arg_arr[arg_cnt-1] = NULL;
+    // // close(file_desc);
     else
     {
         return 0;
@@ -990,7 +1087,7 @@ int main(int argc, char *argv[])
                 continue;
 
             // ####################### Handle comments ###############################
-            //char *comment_token = arg_arr1[0];
+            // char *comment_token = arg_arr1[0];
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as interactive comment\n");
@@ -1053,7 +1150,7 @@ int main(int argc, char *argv[])
             //     free(arg_arr2[i]);
             // }
 
-            ///free(arg_arr2);
+            /// free(arg_arr2);
 
         } // while(1); //((len != -1));
     }
