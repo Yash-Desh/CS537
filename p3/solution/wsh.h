@@ -9,15 +9,14 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag);
 
 int arg_parse(char *str, char **arg_arr, char *delims);
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str);
+int redirection(char **arg_arr, int arg_cnt);
 
 void builtin_ls();
 void builtin_cd(char **arg_arr);
 void builtin_local(char *arg, int *shellvars_len);
 void builtin_vars();
 void builtin_history();
-
-
-int redirection(char **arg_arr, int arg_cnt);
+void builtin_export(char **arg_arr);
 
 void solve(char **arg_arr, int arg_cnt);
 

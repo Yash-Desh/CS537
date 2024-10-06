@@ -117,6 +117,7 @@ void change_history_size(char *n)
     Hsize = newsize;
     prune_history(newsize, Hcnt, 0);
     // printf("History size changed to %d\n", Hsize);
+    return_code = 0;
 }
 
 void record_history(char *arg, char *firstarg)
@@ -273,176 +274,6 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
     }
 }
 
-// ######################################### Built-in #############################################
-
-void builtin_ls()
-{
-    int no_of_files;
-    // char** fileList;
-    struct dirent **fileListTemp;
-    char *path = ".";
-    no_of_files = scandir(path, &fileListTemp, NULL, alphasort);
-    // printf("no of files : %d\n", no_of_files);
-    for (int i = 0; i < no_of_files; i++)
-    {
-        if (fileListTemp[i]->d_name[0] == '.')
-            continue;
-        printf("%s\n", fileListTemp[i]->d_name);
-    }
-
-    // free the memory
-    for (int i = 0; i < no_of_files; i++)
-    {
-        free(fileListTemp[i]);
-    }
-
-    free(fileListTemp);
-    return_code = 0;
-}
-
-void builtin_cd(char **arg_arr)
-{
-    // char s[100];
-
-    // using the command
-    int rc = chdir(arg_arr[1]);
-
-    if (rc == 0)
-    {
-        // printing current working directory
-        // printf("%s\n", getcwd(s, 100));
-        return_code = 0;
-    }
-    else
-    {
-        printf("chdir error\n");
-        return_code = -1;
-    }
-}
-
-void builtin_local(char *arg, int *shellvars_len)
-{
-    // check if variable is already present in list
-    struct SNode *ptr = Sfirst;
-
-    // parse the argument to local
-    char *temp[2];
-    int cnt = arg_parse(arg, temp, "=");
-
-    // handle empty shell variable assignments
-    if (cnt != 2)
-    {
-        temp[1] = " ";
-    }
-
-    // check for variable substitution
-    if (temp[1][0] == '$')
-    {
-        // tokenize for :
-        // printf("$ encountered in local command\n");
-        variable_sub(1, temp, cnt, temp[0]);
-    }
-
-    // if shell variable is already present
-    while (ptr != NULL)
-    {
-
-        if (strcmp(ptr->key, temp[0]) == 0)
-        {
-            ptr->value = strdup(temp[1]);
-            return;
-        }
-        ptr = ptr->next;
-    }
-
-    // return the iterator to head pointer
-    ptr = Sfirst;
-    struct SNode *t;
-    t = (struct SNode *)malloc(sizeof(struct SNode));
-    t->key = strdup(temp[0]);
-    t->value = strdup(temp[1]);
-    t->next = NULL;
-    // printf("Node created\n");
-
-    if (Sfirst == NULL)
-    {
-        // printf("inside if condition\n");
-        Sfirst = t;
-        ptr = t;
-    }
-    else
-    {
-        //     // struct shell_var *ptr = head;
-        // printf("Inside else condition\n");
-        while (ptr->next != NULL)
-        {
-            // printf("inside while loop\n");
-            ptr = ptr->next;
-        }
-        ptr->next = t;
-    }
-    // debug statements : to be removed
-    (*shellvars_len)++;
-    // printf("Number of shell variables = %d\n", *shellvars_len);
-}
-
-void builtin_vars()
-{
-    // printf("entered builtin_vars function\n");
-    if (Sfirst == NULL)
-    {
-        printf("No shell variable\n");
-    }
-    struct SNode *ptr = Sfirst;
-    while (ptr != NULL)
-    {
-        printf("%s", ptr->key);
-        printf("=");
-        printf("%s\n", ptr->value);
-        ptr = ptr->next;
-    }
-    // printf("exiting builtin_vars function\n");
-}
-
-void builtin_history()
-{
-    // prints the nodes in the LL & also increments counter
-    struct HNode *hptr = Hfirst;
-    int i = 1;
-    while (hptr != NULL)
-    {
-        printf("%d) %s\n", i, hptr->command);
-        i++;
-        hptr = hptr->next;
-    }
-}
-
-void builtin_export(char **arg_arr)
-{
-    char *env_var[2];
-    int cnt = arg_parse(arg_arr[1], env_var, "=");
-    // handle empty shell variable assignments
-    // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
-    // {
-    //     // Doing just export VAR without definition is not allowed and should produce error.
-    //     return_code = -1;
-    //     return;
-    // }
-    // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
-    if (cnt != 2)
-    {
-        env_var[1] = " ";
-    }
-    // check for variable substitution
-    if (env_var[1][0] == '$')
-    {
-        // tokenize for :
-        // printf("$ encountered in local command\n");
-        variable_sub(1, env_var, cnt, env_var[0]);
-    }
-    setenv(env_var[0], env_var[1], 1);
-}
-
 // ################### handle redirection ######################
 int redirection(char **arg_arr, int arg_cnt)
 {
@@ -580,6 +411,177 @@ int redirection(char **arg_arr, int arg_cnt)
     }
 }
 
+// ######################################### Built-in #############################################
+
+void builtin_ls()
+{
+    int no_of_files;
+    // char** fileList;
+    struct dirent **fileListTemp;
+    char *path = ".";
+    no_of_files = scandir(path, &fileListTemp, NULL, alphasort);
+    // printf("no of files : %d\n", no_of_files);
+    for (int i = 0; i < no_of_files; i++)
+    {
+        if (fileListTemp[i]->d_name[0] == '.')
+            continue;
+        printf("%s\n", fileListTemp[i]->d_name);
+    }
+
+    // free the memory
+    for (int i = 0; i < no_of_files; i++)
+    {
+        free(fileListTemp[i]);
+    }
+
+    free(fileListTemp);
+    return_code = 0;
+}
+
+void builtin_cd(char **arg_arr)
+{
+    int rc = chdir(arg_arr[1]);
+
+    if (rc == 0)
+    {
+        // chdir successfull
+        return_code = 0;
+    }
+    else
+    {
+        // chdir unsuccessful
+        fprintf(stderr, "chdir error\n");
+        return_code = -1;
+    }
+}
+
+void builtin_local(char *arg, int *shellvars_len)
+{
+    // check if variable is already present in list
+    struct SNode *ptr = Sfirst;
+
+    // parse the argument to local
+    char *temp[2];
+    int cnt = arg_parse(arg, temp, "=");
+
+    // handle empty shell variable assignments
+    if (cnt != 2)
+    {
+        temp[1] = " ";
+    }
+
+    // check for variable substitution
+    if (temp[1][0] == '$')
+    {
+        // tokenize for :
+        // printf("$ encountered in local command\n");
+        variable_sub(1, temp, cnt, temp[0]);
+    }
+
+    // if shell variable is already present
+    while (ptr != NULL)
+    {
+
+        if (strcmp(ptr->key, temp[0]) == 0)
+        {
+            ptr->value = strdup(temp[1]);
+            return;
+        }
+        ptr = ptr->next;
+    }
+
+    // return the iterator to head pointer
+    ptr = Sfirst;
+    struct SNode *t;
+    t = (struct SNode *)malloc(sizeof(struct SNode));
+    t->key = strdup(temp[0]);
+    t->value = strdup(temp[1]);
+    t->next = NULL;
+    // printf("Node created\n");
+
+    if (Sfirst == NULL)
+    {
+        // printf("inside if condition\n");
+        Sfirst = t;
+        ptr = t;
+    }
+    else
+    {
+        //     // struct shell_var *ptr = head;
+        // printf("Inside else condition\n");
+        while (ptr->next != NULL)
+        {
+            // printf("inside while loop\n");
+            ptr = ptr->next;
+        }
+        ptr->next = t;
+    }
+    // debug statements : to be removed
+    (*shellvars_len)++;
+    // printf("Number of shell variables = %d\n", *shellvars_len);
+    return_code = 0;
+}
+
+void builtin_vars()
+{
+    // printf("entered builtin_vars function\n");
+    if (Sfirst == NULL)
+    {
+        printf("No shell variable\n");
+    }
+    struct SNode *ptr = Sfirst;
+    while (ptr != NULL)
+    {
+        printf("%s", ptr->key);
+        printf("=");
+        printf("%s\n", ptr->value);
+        ptr = ptr->next;
+    }
+    // printf("exiting builtin_vars function\n");
+    return_code = 0;
+}
+
+void builtin_history()
+{
+    // prints the nodes in the LL & also increments counter
+    struct HNode *hptr = Hfirst;
+    int i = 1;
+    while (hptr != NULL)
+    {
+        printf("%d) %s\n", i, hptr->command);
+        i++;
+        hptr = hptr->next;
+    }
+    return_code = 0;
+}
+
+void builtin_export(char **arg_arr)
+{
+    char *env_var[2];
+    int cnt = arg_parse(arg_arr[1], env_var, "=");
+    // handle empty shell variable assignments
+    // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
+    // {
+    //     // Doing just export VAR without definition is not allowed and should produce error.
+    //     return_code = -1;
+    //     return;
+    // }
+    // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
+    if (cnt != 2)
+    {
+        env_var[1] = " ";
+    }
+    // check for variable substitution
+    if (env_var[1][0] == '$')
+    {
+        // tokenize for :
+        // printf("$ encountered in local command\n");
+        variable_sub(1, env_var, cnt, env_var[0]);
+    }
+    setenv(env_var[0], env_var[1], 1);
+    return_code = 0;
+}
+
 // ################################### main solver function #######################################
 
 void solve(char **arg_arr, int arg_cnt)
@@ -601,33 +603,22 @@ void solve(char **arg_arr, int arg_cnt)
         {
             builtin_cd(arg_arr);
         }
+        // more than 1 arguments to ls
+        else
+        {
+            return_code = -1;
+        }
     }
 
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
-        // char *env_var[2];
-        // int cnt = arg_parse(arg_arr[1], env_var, "=");
-        // // handle empty shell variable assignments
-        // // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
-        // // {
-        // //     // Doing just export VAR without definition is not allowed and should produce error.
-        // //     return_code = -1;
-        // //     return;
-        // // }
-        // // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
-        // if (cnt != 2)
-        // {
-        //     env_var[1] = " ";
-        // }
-        // // check for variable substitution
-        // if (env_var[1][0] == '$')
-        // {
-        //     // tokenize for :
-        //     // printf("$ encountered in local command\n");
-        //     variable_sub(1, env_var, cnt, env_var[0]);
-        // }
-        // setenv(env_var[0], env_var[1], 1);
+        // Having a dollar sign on the left side is an error, e.g. local $a=b
+        if (arg_arr[1][0] == '$')
+        {
+            return_code = -1;
+            return;
+        }
         builtin_export(arg_arr);
     }
 
@@ -767,6 +758,8 @@ void solve(char **arg_arr, int arg_cnt)
             // parent goes down this path (original process)
             // int wc =
             wait(&return_code);
+            if (return_code > 0)
+                return_code = -1;
             // printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
         }
     }
@@ -806,7 +799,7 @@ void solve(char **arg_arr, int arg_cnt)
             // loop over each added path
             for (int i = 0; i < path_cnt; i++)
             {
-                char temp[100];
+                char temp[1000];
                 strcpy(temp, path_arg[i]);
                 // printf("%s\n", temp);
                 strcat(temp, "/");
@@ -886,10 +879,6 @@ int main(int argc, char *argv[])
     size_t size = 0;
     ssize_t len = 0;
 
-    // Declaring the Linked List to store all the shell variables
-    // int shellvars_len = 0;
-    // struct shell_var *shellvar_head=NULL;
-
     // select between batch mode & interactive mode
     if (argc == 2)
     {
@@ -925,8 +914,8 @@ int main(int argc, char *argv[])
                 continue;
 
             // ####################### Handle comments ###############################
-            char *comment_token = arg_arr1[0];
-            if (comment_token[0] == '#')
+            // char *comment_token = arg_arr1[0];
+            if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as batch comment\n");
                 continue;
@@ -1001,8 +990,8 @@ int main(int argc, char *argv[])
                 continue;
 
             // ####################### Handle comments ###############################
-            char *comment_token = arg_arr1[0];
-            if (comment_token[0] == '#')
+            //char *comment_token = arg_arr1[0];
+            if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as interactive comment\n");
                 continue;
@@ -1048,6 +1037,24 @@ int main(int argc, char *argv[])
             arg_cnt = arg_parse(str4, arg_arr2, " ");
             solve(arg_arr2, arg_cnt);
 
+            free(str1);
+            str1 = NULL;
+            free(str2);
+            str2 = NULL;
+            free(str3);
+            str3 = NULL;
+            free(str4);
+            str4 = NULL;
+            free(str5);
+            str5 = NULL;
+
+            // for (int i = 0; arg_arr2[i] != NULL; i++)
+            // {
+            //     free(arg_arr2[i]);
+            // }
+
+            ///free(arg_arr2);
+
         } // while(1); //((len != -1));
     }
 
@@ -1059,6 +1066,7 @@ int main(int argc, char *argv[])
     }
 
     free(input);
+    input = NULL;
     free_memory();
     // printf("Before returning main %d\n", return_code);
     return return_code;
