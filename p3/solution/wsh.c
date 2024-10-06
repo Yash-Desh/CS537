@@ -285,7 +285,7 @@ int redirection(char **arg_arr, int arg_cnt)
     char *temp = strdup(arg_arr[arg_cnt - 1]);
 
     // position of the 1st redirection symbol
-    int pos = 0;
+    int pos = -1;
     for (int i = 0; temp[i] != '\0'; i++)
     {
         if (temp[i] == '>' || temp[i] == '<' || temp[i] == '&')
@@ -299,7 +299,7 @@ int redirection(char **arg_arr, int arg_cnt)
     char num_strg[1024];
     // copy the number into num_strg
     // get its integer format
-    if (pos != 0)
+    if (pos > 0)
     {
         for (int i = 0; i < pos; i++)
         {
@@ -307,7 +307,6 @@ int redirection(char **arg_arr, int arg_cnt)
         }
         num_strg[pos] = '\0';
         n = atoi(num_strg);
-        
     }
 
     // file descriptor of new file
@@ -315,195 +314,99 @@ int redirection(char **arg_arr, int arg_cnt)
     // file descriptor of old file
     int fd = -1;
 
+    // file name pointer
     char *temp2 = NULL;
 
     // case : redirect stdout
-    if (temp[pos] == '<')
+    if (pos != -1)
     {
-        temp2 = temp + pos + 1;
-        file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
-        if (pos == 0)
+        // redirection symbol present
+        if (temp[pos] == '<')
         {
-            fd = STDIN_FILENO;
-        }
-        else if (pos != 0)
-        {
-            fd = n;
-        }
-        dup2(file_desc, fd);
+            temp2 = temp + pos + 1;
+            file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+            if (pos == 0)
+            {
+                fd = STDIN_FILENO;
+            }
+            else if (pos != 0)
+            {
+                fd = n;
+            }
+            dup2(file_desc, fd);
 
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-
-    else if (temp[pos] == '&')
-    {
-        if (temp[pos + 1] == '>' && temp[pos + 2] == '>')
-        {
-            temp2 = temp + 3;
-            file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+            // // set the file name to NULL
+            // arg_arr[arg_cnt - 1] = NULL;
+            // close(file_desc);
+            // return 1;
         }
-        else if (temp[pos + 1] == '>')
-        {
-            temp2 = temp + 2;
-            file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
-        }
-        dup2(file_desc, STDOUT_FILENO);
-        dup2(file_desc, STDERR_FILENO);
 
-        // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
-    }
-
-    else if (temp[pos] == '>')
-    {
-        if (pos == 0)
+        else if (temp[pos] == '&')
         {
-            if (temp[pos] == '>' && temp[pos + 1] == '>')
+            if (temp[pos + 1] == '>' && temp[pos + 2] == '>')
+            {
+                temp2 = temp + 3;
+                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+            }
+            else if (temp[pos + 1] == '>')
             {
                 temp2 = temp + 2;
-                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
             }
-            else if (temp[pos] == '>')
-            {
-                temp2 = temp + 1;
-                file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-            }
-            fd = STDOUT_FILENO;
+            dup2(file_desc, STDOUT_FILENO);
+            dup2(file_desc, STDERR_FILENO);
+
+            // // set the file name to NULL
+            // arg_arr[arg_cnt - 1] = NULL;
+            // close(file_desc);
+            // return 1;
         }
-        else if (pos != 0)
+
+        else if (temp[pos] == '>')
         {
-            if (temp[pos] == '>' && temp[pos + 1] == '>')
+            if (pos == 0)
             {
-                temp2 = temp + pos + 2;
-                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                if (temp[pos] == '>' && temp[pos + 1] == '>')
+                {
+                    temp2 = temp + 2;
+                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                }
+                else if (temp[pos] == '>')
+                {
+                    temp2 = temp + 1;
+                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+                }
+                fd = STDOUT_FILENO;
             }
-            else if (temp[pos] == '>')
+            else if (pos != 0)
             {
-                temp2 = temp + pos + 1;
-                file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+                if (temp[pos] == '>' && temp[pos + 1] == '>')
+                {
+                    temp2 = temp + pos + 2;
+                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                }
+                else if (temp[pos] == '>')
+                {
+                    temp2 = temp + pos + 1;
+                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+                }
+                fd = n;
             }
-            fd = n;
+            dup2(file_desc, fd);
+
+            // // set the file name to NULL
+            // arg_arr[arg_cnt - 1] = NULL;
+            // close(file_desc);
+            // return 1;
         }
-        dup2(file_desc, fd);
-
         // set the file name to NULL
-        arg_arr[arg_cnt - 1] = NULL;
-        close(file_desc);
-        return 1;
+            arg_arr[arg_cnt - 1] = NULL;
+            close(file_desc);
+            return 1;
     }
-
-    // else if (temp[1] == '<')
-    // {
-    //     char *temp2 = temp + 2;
-    //     int fd = temp[0] - '0';
-    //     file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
-    //     dup2(file_desc, fd);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // else if (temp[0] == '>' && temp[1] == '>')
-    // {
-    //     // lose the >> operator
-    //     char *temp2 = temp + 2;
-
-    //     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
-    //     dup2(file_desc, STDOUT_FILENO);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // else if (temp[0] == '>')
-    // {
-    //     // lose the > operator
-    //     char *temp2 = temp + 1;
-    //     // 0777 grants read, write, and execute permissions to everyone
-    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-    //     dup2(file_desc, STDOUT_FILENO);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // else if (temp[0] == '&' && temp[1] == '>' && temp[2] == '>')
-    // {
-    //     // lose the &> operator
-    //     char *temp2 = temp + 3;
-    //     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
-    //     dup2(file_desc, STDOUT_FILENO);
-    //     dup2(file_desc, STDERR_FILENO);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // else if (temp[1] == '>' && temp[2] == '>')
-    // {
-    //     // lose the > operator
-    //     char *temp2 = temp + 3;
-
-    //     // subtracted the ASCII value of 0
-    //     int fd = temp[0] - '0';
-    //     // 0777 grants read, write, and execute permissions to everyone
-    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_APPEND, 0777);
-    //     dup2(file_desc, fd);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // // Redirecting Standard Output and Standard Error at once
-    // else if (temp[0] == '&' && temp[1] == '>')
-    // {
-    //     // lose the &> operator
-    //     char *temp2 = temp + 2;
-    //     file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
-    //     dup2(file_desc, STDOUT_FILENO);
-    //     dup2(file_desc, STDERR_FILENO);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-
-    // else if (temp[1] == '>')
-    // {
-    //     // lose the > operator
-    //     char *temp2 = temp + 2;
-
-    //     // subtracted the ASCII value of 0
-    //     int fd = temp[0] - '0';
-    //     // 0777 grants read, write, and execute permissions to everyone
-    //     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
-    //     dup2(file_desc, fd);
-
-    //     // set the file name to NULL
-    //     arg_arr[arg_cnt - 1] = NULL;
-    //     close(file_desc);
-    //     return 1;
-    // }
-    // // arg_arr[arg_cnt-1] = NULL;
-    // // close(file_desc);
     else
     {
+        // no redirection symbol present
         return 0;
     }
 }
