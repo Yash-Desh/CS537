@@ -203,6 +203,19 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 
 // ######################################## Parsers ##############################################
 
+int cnt_tokens(char *str)
+{
+    int cnt = 0;
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] == ' ' && (str[i + 1] != ' ' && str[i + 1] != '\0') && str[i + 1] != '\n')
+        {
+            cnt++;
+        }
+    }
+    return cnt + 1;
+}
+
 int arg_parse(char *str, char **arg_arr, char *delims)
 {
     // using strtok()
@@ -334,11 +347,6 @@ int redirection(char **arg_arr, int arg_cnt)
                 fd = n;
             }
             dup2(file_desc, fd);
-
-            // // set the file name to NULL
-            // arg_arr[arg_cnt - 1] = NULL;
-            // close(file_desc);
-            // return 1;
         }
 
         else if (temp[pos] == '&')
@@ -355,11 +363,6 @@ int redirection(char **arg_arr, int arg_cnt)
             }
             dup2(file_desc, STDOUT_FILENO);
             dup2(file_desc, STDERR_FILENO);
-
-            // // set the file name to NULL
-            // arg_arr[arg_cnt - 1] = NULL;
-            // close(file_desc);
-            // return 1;
         }
 
         else if (temp[pos] == '>')
@@ -393,16 +396,11 @@ int redirection(char **arg_arr, int arg_cnt)
                 fd = n;
             }
             dup2(file_desc, fd);
-
-            // // set the file name to NULL
-            // arg_arr[arg_cnt - 1] = NULL;
-            // close(file_desc);
-            // return 1;
         }
         // set the file name to NULL
-            arg_arr[arg_cnt - 1] = NULL;
-            close(file_desc);
-            return 1;
+        arg_arr[arg_cnt - 1] = NULL;
+        close(file_desc);
+        return 1;
     }
     else
     {
@@ -588,11 +586,21 @@ void solve(char **arg_arr, int arg_cnt)
 {
 
     // exit built-in command
-    if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
+    if ((strcmp(arg_arr[0], "exit") == 0))
     {
-        // fflush(stdout);
-        // printf("Called exit with code %d\n", return_code);
-        exit(return_code);
+        if ((arg_cnt == 1))
+        {
+            // It is an error to pass any arguments to exit
+            // fflush(stdout);
+            // printf("Called exit with code %d\n", return_code);
+            exit(return_code);
+        }
+
+        // It is an error to pass any arguments to exit
+        else
+        {
+            return_code = -1;
+        }
     }
 
     // cd built-in
@@ -613,29 +621,75 @@ void solve(char **arg_arr, int arg_cnt)
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
-        // Having a dollar sign on the left side is an error, e.g. local $a=b
-        if (arg_arr[1][0] == '$')
+        if (arg_cnt == 2)
+        {
+            // Having a dollar sign on the left side is an error, e.g. local $a=b
+            if (arg_arr[1][0] == '$')
+            {
+                return_code = -1;
+                return;
+            }
+
+            // search for an "=" sign
+            int i;
+            for (i = 0; arg_arr[1][i] != '\0'; i++)
+            {
+                if (arg_arr[1][i] == '=')
+                    break;
+            }
+            if (arg_arr[1][i] == '\0')
+            {
+                // No = sign encountered
+                return_code = -1;
+            }
+            else
+            {
+                builtin_export(arg_arr);
+            }
+        }
+        else
         {
             return_code = -1;
-            return;
         }
-        builtin_export(arg_arr);
     }
 
     // local built-in
     else if (strcmp(arg_arr[0], "local") == 0)
     {
-        // Having a dollar sign on the left side is an error, e.g. local $a=b
-        if (arg_arr[1][0] == '$')
+        if (arg_cnt == 2)
         {
-            return_code = -1;
-            return;
-        }
+            // Having a dollar sign on the left side is an error, e.g. local $a=b
+            if (arg_arr[1][0] == '$')
+            {
+                return_code = -1;
+                return;
+            }
 
-        // compare that the variable is not already present
-        // if yes : update variable
-        // if no : create new variable & store new value
-        builtin_local(arg_arr[1], &shellvars_len);
+            // search for an "=" sign
+            int i;
+            for (i = 0; arg_arr[1][i] != '\0'; i++)
+            {
+                if (arg_arr[1][i] == '=')
+                    break;
+            }
+            if (arg_arr[1][i] == '\0')
+            {
+                // No = sign encountered
+                return_code = -1;
+            }
+            else
+            {
+                // compare that the variable is not already present
+                // if yes : update variable
+                // if no : create new variable & store new value
+                builtin_local(arg_arr[1], &shellvars_len);
+            }
+        }
+        else
+        {
+            // for anthing other than "local a=b" format command
+            return_code = -1;
+        }
 
         // NOTE: run this command "local varname"
     }
@@ -651,10 +705,16 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stderr = dup(2);
             if (redirection(arg_arr, arg_cnt))
             {
+                // successful redirection
                 builtin_vars();
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
+            }
+            else
+            {
+                // redirection unsuccessful
+                return_code = -1;
             }
             close(saved_stderr);
             close(saved_stdout);
@@ -665,14 +725,31 @@ void solve(char **arg_arr, int arg_cnt)
             builtin_vars();
             return_code = 0;
         }
+
+        else
+        {
+            return_code = -1;
+        }
     }
 
     // history built-n
     else if (strcmp(arg_arr[0], "history") == 0)
     {
         // printf("Entered history condition\n");
-        if (arg_cnt > 2 && !strcmp(arg_arr[1], "set"))
+        if (arg_cnt == 3 && !strcmp(arg_arr[1], "set"))
         {
+            // works only when "history set [n]"
+
+            // check whether n is numerical value
+            for (int i = 0; arg_arr[2][i] != '\0'; i++)
+            {
+                if (!(arg_arr[2][i] >= '0' && arg_arr[2][i] < '9'))
+                {
+                    return_code = -1;
+                    return;
+                }
+            }
+
             change_history_size(arg_arr[2]);
         }
         else if (arg_cnt == 2)
@@ -682,10 +759,16 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stderr = dup(2);
             if (redirection(arg_arr, arg_cnt))
             {
+                // redirection successfull
                 builtin_history();
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
+            }
+            else
+            {
+                // redirection unsuccessfull
+                return_code = -1;
             }
             close(saved_stderr);
             close(saved_stdout);
@@ -695,10 +778,16 @@ void solve(char **arg_arr, int arg_cnt)
         {
             builtin_history();
         }
+        else
+        {
+            return_code = -1;
+        }
     }
 
     // ls built-in command
-    else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt <= 2))
+    // else if ((strcmp(arg_arr[0], "ls") == 0) && (arg_cnt <= 2))
+    // check if 2nd argument has access(X_OK)
+    else if ((strcmp(arg_arr[0], "ls") == 0))
     {
         if (arg_cnt == 2)
         {
@@ -707,10 +796,16 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stderr = dup(2);
             if (redirection(arg_arr, arg_cnt))
             {
+                // redirection successful
                 builtin_ls();
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
+            }
+            else
+            {
+                // redirection unsuccessful
+                return_code = -1;
             }
             close(saved_stderr);
             close(saved_stdout);
@@ -720,6 +815,10 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_ls();
+        }
+        else
+        {
+            return_code = -1;
         }
     }
 
@@ -906,6 +1005,7 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
+            // printf("No of tokens = %d\n", cnt_tokens(str1));
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
@@ -982,6 +1082,7 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
+            // printf("No of tokens = %d\n", cnt_tokens(str1));
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
