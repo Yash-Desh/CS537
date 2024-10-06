@@ -277,22 +277,6 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 
 void builtin_ls()
 {
-    // DIR *d;
-    // struct dirent *dir;
-    // // . represents current working directory
-    // d = opendir(".");
-    // if (d)
-    // {
-    //     while ((dir = readdir(d)) != NULL)
-    //     {
-    //         // Prevent "." & ".." from getting printed
-    //         if (dir->d_name[0] == '.')
-    //             continue;
-    //         printf("%s\n", dir->d_name);
-    //     }
-    //     closedir(d);
-    // }
-
     int no_of_files;
     // char** fileList;
     struct dirent **fileListTemp;
@@ -313,6 +297,7 @@ void builtin_ls()
     }
 
     free(fileListTemp);
+    return_code = 0;
 }
 
 void builtin_cd(char **arg_arr)
@@ -326,10 +311,12 @@ void builtin_cd(char **arg_arr)
     {
         // printing current working directory
         // printf("%s\n", getcwd(s, 100));
+        return_code = 0;
     }
     else
     {
         printf("chdir error\n");
+        return_code = -1;
     }
 }
 
@@ -419,6 +406,7 @@ void builtin_vars()
 
 void builtin_history()
 {
+    // prints the nodes in the LL & also increments counter
     struct HNode *hptr = Hfirst;
     int i = 1;
     while (hptr != NULL)
@@ -427,6 +415,32 @@ void builtin_history()
         i++;
         hptr = hptr->next;
     }
+}
+
+void builtin_export(char **arg_arr)
+{
+    char *env_var[2];
+    int cnt = arg_parse(arg_arr[1], env_var, "=");
+    // handle empty shell variable assignments
+    // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
+    // {
+    //     // Doing just export VAR without definition is not allowed and should produce error.
+    //     return_code = -1;
+    //     return;
+    // }
+    // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
+    if (cnt != 2)
+    {
+        env_var[1] = " ";
+    }
+    // check for variable substitution
+    if (env_var[1][0] == '$')
+    {
+        // tokenize for :
+        // printf("$ encountered in local command\n");
+        variable_sub(1, env_var, cnt, env_var[0]);
+    }
+    setenv(env_var[0], env_var[1], 1);
 }
 
 // ################### handle redirection ######################
@@ -592,33 +606,41 @@ void solve(char **arg_arr, int arg_cnt)
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
-        char *env_var[2];
-        int cnt = arg_parse(arg_arr[1], env_var, "=");
-        // handle empty shell variable assignments
-        // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
+        // char *env_var[2];
+        // int cnt = arg_parse(arg_arr[1], env_var, "=");
+        // // handle empty shell variable assignments
+        // // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
+        // // {
+        // //     // Doing just export VAR without definition is not allowed and should produce error.
+        // //     return_code = -1;
+        // //     return;
+        // // }
+        // // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
+        // if (cnt != 2)
         // {
-        //     // Doing just export VAR without definition is not allowed and should produce error.
-        //     return_code = -1;
-        //     return;
+        //     env_var[1] = " ";
         // }
-        // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
-        if (cnt != 2)
-        {
-            env_var[1] = " ";
-        }
-        // check for variable substitution
-        if (env_var[1][0] == '$')
-        {
-            // tokenize for :
-            // printf("$ encountered in local command\n");
-            variable_sub(1, env_var, cnt, env_var[0]);
-        }
-        setenv(env_var[0], env_var[1], 1);
+        // // check for variable substitution
+        // if (env_var[1][0] == '$')
+        // {
+        //     // tokenize for :
+        //     // printf("$ encountered in local command\n");
+        //     variable_sub(1, env_var, cnt, env_var[0]);
+        // }
+        // setenv(env_var[0], env_var[1], 1);
+        builtin_export(arg_arr);
     }
 
     // local built-in
     else if (strcmp(arg_arr[0], "local") == 0)
     {
+        // Having a dollar sign on the left side is an error, e.g. local $a=b
+        if (arg_arr[1][0] == '$')
+        {
+            return_code = -1;
+            return;
+        }
+
         // compare that the variable is not already present
         // if yes : update variable
         // if no : create new variable & store new value
@@ -650,6 +672,7 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_vars();
+            return_code = 0;
         }
     }
 
@@ -737,7 +760,7 @@ void solve(char **arg_arr, int arg_cnt)
             execv(myargs[0], myargs); // runs word count
             printf("this shouldn't print out\n");
             // kill the child if the execv failed
-            exit(1);
+            exit(-1);
         }
         else
         {
@@ -802,7 +825,7 @@ void solve(char **arg_arr, int arg_cnt)
             // check errno & perror
             // printf("%s: command not found\n", myargs[0]);
             // in case failed exec, the child needs to be killed
-            exit(1);
+            exit(-1);
         }
         else
         {
