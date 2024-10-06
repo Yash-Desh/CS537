@@ -13,6 +13,8 @@
 #define MAXLINE 1024
 #define MAXARGS 128
 
+int return_code = 0;
+
 // Linked List for shell variables
 struct SNode
 {
@@ -228,7 +230,7 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 {
     arg_arr[pos]++;
-    printf("%s\n", arg_arr[pos]);
+    // printf("%s\n", arg_arr[pos]);
     struct SNode *ptr = Sfirst;
 
     // search in environment variables
@@ -262,7 +264,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, " ");
             strcat(modified, arg_arr[i]);
         }
-        printf("New command becomes %s\n", modified);
+        // printf("New command becomes %s\n", modified);
         return modified;
     }
     else
@@ -350,7 +352,7 @@ void builtin_local(char *arg, int *shellvars_len)
     if (temp[1][0] == '$')
     {
         // tokenize for :
-        printf("$ encountered in local command\n");
+        // printf("$ encountered in local command\n");
         variable_sub(1, temp, cnt, temp[0]);
     }
 
@@ -568,11 +570,13 @@ int redirection(char **arg_arr, int arg_cnt)
 
 void solve(char **arg_arr, int arg_cnt)
 {
+
     // exit built-in command
     if ((strcmp(arg_arr[0], "exit") == 0) && (arg_cnt == 1))
     {
         // fflush(stdout);
-        exit(0);
+        // printf("Called exit with code %d\n", return_code);
+        exit(return_code);
     }
 
     // cd built-in
@@ -589,7 +593,26 @@ void solve(char **arg_arr, int arg_cnt)
     else if (strcmp(arg_arr[0], "export") == 0)
     {
         char *env_var[2];
-        arg_parse(arg_arr[1], env_var, "=");
+        int cnt = arg_parse(arg_arr[1], env_var, "=");
+        // handle empty shell variable assignments
+        // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
+        // {
+        //     // Doing just export VAR without definition is not allowed and should produce error.
+        //     return_code = -1;
+        //     return;
+        // }
+        // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
+        if (cnt != 2)
+        {
+            env_var[1] = " ";
+        }
+        // check for variable substitution
+        if (env_var[1][0] == '$')
+        {
+            // tokenize for :
+            // printf("$ encountered in local command\n");
+            variable_sub(1, env_var, cnt, env_var[0]);
+        }
         setenv(env_var[0], env_var[1], 1);
     }
 
@@ -608,7 +631,26 @@ void solve(char **arg_arr, int arg_cnt)
     else if (strcmp(arg_arr[0], "vars") == 0)
     {
         // printf("Entered vars condition\n");
-        builtin_vars();
+        if (arg_cnt == 2)
+        {
+            int saved_stdin = dup(0);
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            if (redirection(arg_arr, arg_cnt))
+            {
+                builtin_vars();
+                dup2(saved_stdin, 0);
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
+            }
+            close(saved_stderr);
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+        else if (arg_cnt == 1)
+        {
+            builtin_vars();
+        }
     }
 
     // history built-n
@@ -621,14 +663,17 @@ void solve(char **arg_arr, int arg_cnt)
         }
         else if (arg_cnt == 2)
         {
+            int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
             if (redirection(arg_arr, arg_cnt))
             {
                 builtin_history();
+                dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
             }
+            close(saved_stderr);
             close(saved_stdout);
             close(saved_stderr);
         }
@@ -643,14 +688,17 @@ void solve(char **arg_arr, int arg_cnt)
     {
         if (arg_cnt == 2)
         {
+            int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
             if (redirection(arg_arr, arg_cnt))
             {
                 builtin_ls();
+                dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
             }
+            close(saved_stderr);
             close(saved_stdout);
             close(saved_stderr);
         }
@@ -666,6 +714,7 @@ void solve(char **arg_arr, int arg_cnt)
     // absolute + relative path
     else if (access(arg_arr[0], X_OK) != -1)
     {
+        // printf("Found relative/absolute path\n");
         int rc = fork();
         if (rc < 0)
         {
@@ -688,13 +737,13 @@ void solve(char **arg_arr, int arg_cnt)
             execv(myargs[0], myargs); // runs word count
             printf("this shouldn't print out\n");
             // kill the child if the execv failed
-            exit(0);
+            exit(1);
         }
         else
         {
             // parent goes down this path (original process)
             // int wc =
-            wait(NULL);
+            wait(&return_code);
             // printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
         }
     }
@@ -760,8 +809,12 @@ void solve(char **arg_arr, int arg_cnt)
             // fflush : glibc buffer
             // parent goes down this path (original process)
             // int wc = wait(NULL);
-            wait(NULL);
-            // printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+            // printf("before wait writes to return_code %d\n", return_code);
+            wait(&return_code);
+            // printf("After wait writes, the return_code is %d\n", return_code);
+            //  printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
+            if (return_code > 0)
+                return_code = -1;
         }
     }
 }
@@ -864,7 +917,7 @@ int main(int argc, char *argv[])
                 char *temp_token = arg_arr1[i];
                 if (temp_token[0] == '$')
                 {
-                    printf("$ encountered\n");
+                    // printf("$ encountered\n");
                     sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
                 }
             }
@@ -940,7 +993,7 @@ int main(int argc, char *argv[])
                 char *temp_token = arg_arr1[i];
                 if (temp_token[0] == '$')
                 {
-                    printf("$ encountered\n");
+                    // printf("$ encountered\n");
                     sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
                 }
             }
@@ -975,7 +1028,15 @@ int main(int argc, char *argv[])
         } // while(1); //((len != -1));
     }
 
+    else
+    {
+        // The shell can be invoked with either no arguments or a
+        // single argument; anything else is an error.
+        return -1;
+    }
+
     free(input);
     free_memory();
-    return 0;
+    // printf("Before returning main %d\n", return_code);
+    return return_code;
 }

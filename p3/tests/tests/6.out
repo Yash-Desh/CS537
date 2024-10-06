@@ -1,6 +1,7 @@
 Makefile
 Nnum
 Nnum.c
+file.txt
 input.txt
 output.txt
 script.wsh
