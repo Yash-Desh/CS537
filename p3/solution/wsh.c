@@ -33,6 +33,39 @@ struct HNode
 };
 struct HNode *Hfirst = NULL;
 
+// Free Heap Memory
+void free_memory()
+{
+    // free history linked list
+    struct HNode *hprev = NULL;
+    while (Hfirst != NULL)
+    {
+        hprev = Hfirst;
+        Hfirst = Hfirst->next;
+        free(hprev);
+    }
+
+    // free shell variables linked list
+    struct SNode *sprev = NULL;
+    while (Sfirst != NULL)
+    {
+        sprev = Sfirst;
+        Sfirst = Sfirst->next;
+        free(sprev);
+    }
+    // printf("freed memory\n");
+}
+
+void free_input_tokens(char **arg_arr, int arg_cnt)
+{
+    // free input tokens
+    for (int i = 0; i < arg_cnt; i++)
+    {
+        free(arg_arr[i]);
+        arg_arr[i] = NULL;
+    }
+}
+
 // ##################################### History ##############################################
 
 void record_input(char *dest, char *src)
@@ -205,27 +238,48 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 
 int cnt_tokens(char *str)
 {
-    int cnt = 0;
+    int cnt = -1;
+    if (str[0] == ' ')
+    {
+        cnt = 0;
+    }
+    else
+    {
+        cnt = 1;
+    }
+    int character_flag = 0;
     for (int i = 0; str[i] != '\0'; i++)
     {
-        if (str[i] == ' ' && (str[i + 1] != ' ' && str[i + 1] != '\0') && str[i + 1] != '\n')
+        if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
+        {
+            character_flag = 1;
+        }
+
+        if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
         {
             cnt++;
         }
     }
-    return cnt + 1;
+    if (character_flag)
+    {
+        return cnt;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 int arg_parse(char *str, char **arg_arr, char *delims)
 {
     // using strtok()
-    // Returns first token
+    // Returns pointer to first token
     char *token = strtok(str, delims);
 
     // count the number of arguments
     int arg_cnt = 0;
 
-    // Keep printing tokens while one of the
+    // Keep counting tokens while one of the
     // delimiters present in str[].
     while (token != NULL)
     {
@@ -235,6 +289,8 @@ int arg_parse(char *str, char **arg_arr, char *delims)
         token = strtok(NULL, delims);
     }
 
+    // comment out
+    str = NULL;
     // debug statement
     // printf("tokenization done %d\n", arg_cnt);
     return arg_cnt;
@@ -292,7 +348,8 @@ int redirection(char **arg_arr, int arg_cnt)
 {
     // parameters : space seperated array of tokens, number of tokens
     // return : 1=redirection successful
-    //          0=redirection unsuccessful
+    //          0=redirection unsuccessful, no redirection symbol
+    //          2=redirection unsuccessful, [n] is not a number
 
     // case : redirection token is always the last one on the command line
     char *temp = strdup(arg_arr[arg_cnt - 1]);
@@ -310,12 +367,18 @@ int redirection(char **arg_arr, int arg_cnt)
 
     int n = -1;
     char num_strg[1024];
+    // check if [n] is an an integer number
     // copy the number into num_strg
     // get its integer format
     if (pos > 0)
     {
         for (int i = 0; i < pos; i++)
         {
+            if (!(temp[i] >= '0' && temp[i] < '9'))
+            {
+                return_code = -1;
+                return 2;
+            }
             num_strg[i] = temp[i];
         }
         num_strg[pos] = '\0';
@@ -483,6 +546,7 @@ void builtin_local(char *arg, int *shellvars_len)
         if (strcmp(ptr->key, temp[0]) == 0)
         {
             ptr->value = strdup(temp[1]);
+            return_code = 0;
             return;
         }
         ptr = ptr->next;
@@ -584,15 +648,17 @@ void builtin_export(char **arg_arr)
 
 void solve(char **arg_arr, int arg_cnt)
 {
-
+    // for builtins & fork-execv
     // exit built-in command
     if ((strcmp(arg_arr[0], "exit") == 0))
     {
         if ((arg_cnt == 1))
         {
             // It is an error to pass any arguments to exit
-            // fflush(stdout);
+
             // printf("Called exit with code %d\n", return_code);
+            free_input_tokens(arg_arr, arg_cnt);
+            free_memory();
             exit(return_code);
         }
 
@@ -703,7 +769,7 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt))
+            if (redirection(arg_arr, arg_cnt) == 1)
             {
                 // successful redirection
                 builtin_vars();
@@ -757,7 +823,7 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt))
+            if (redirection(arg_arr, arg_cnt) == 1)
             {
                 // redirection successfull
                 builtin_history();
@@ -794,7 +860,7 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt))
+            if (redirection(arg_arr, arg_cnt) == 1)
             {
                 // redirection successful
                 builtin_ls();
@@ -846,8 +912,15 @@ void solve(char **arg_arr, int arg_cnt)
                 myargs[i] = arg_arr[i];
             }
             myargs[arg_cnt] = NULL; // marks end of array
-            redirection(myargs, arg_cnt);
-            execv(myargs[0], myargs); // runs word count
+            if (redirection(myargs, arg_cnt) == 2)
+            {
+                return_code = -1;
+            }
+            else
+            {
+                execv(myargs[0], myargs); // runs word count
+            }
+
             printf("this shouldn't print out\n");
             // kill the child if the execv failed
             exit(-1);
@@ -884,31 +957,38 @@ void solve(char **arg_arr, int arg_cnt)
             }
             myargs[arg_cnt] = NULL; // marks end of array
 
-            redirection(myargs, arg_cnt);
-            // pointer to path string
-            char *path;
-            // path variable has the entire path string now.
-            path = getenv("PATH");
-            // printf("%s\n", path);
-            char *path_arg[100];
-
-            // contains the number of added paths
-            int path_cnt = arg_parse(path, path_arg, ":");
-            // printf("%d\n", path_cnt);
-            // loop over each added path
-            for (int i = 0; i < path_cnt; i++)
+            if (redirection(myargs, arg_cnt) == 2)
             {
-                char temp[1000];
-                strcpy(temp, path_arg[i]);
-                // printf("%s\n", temp);
-                strcat(temp, "/");
-                // printf("%s\n", temp);
-                strcat(temp, myargs[0]);
-                // printf("%s\n", temp);
-                if (access(temp, X_OK) != -1)
+                // don't exec if redirection has been called erroneously
+                return_code = -1;
+            }
+            else
+            {
+                // pointer to path string
+                char *path;
+                // path variable has the entire path string now.
+                path = getenv("PATH");
+                // printf("%s\n", path);
+                char *path_arg[100];
+
+                // contains the number of added paths
+                int path_cnt = arg_parse(path, path_arg, ":");
+                // printf("%d\n", path_cnt);
+                // loop over each added path
+                for (int i = 0; i < path_cnt; i++)
                 {
-                    int ret = execv(temp, myargs); // runs word count
-                    printf("%d\n", ret);
+                    char temp[1000];
+                    strcpy(temp, path_arg[i]);
+                    // printf("%s\n", temp);
+                    strcat(temp, "/");
+                    // printf("%s\n", temp);
+                    strcat(temp, myargs[0]);
+                    // printf("%s\n", temp);
+                    if (access(temp, X_OK) != -1)
+                    {
+                        int ret = execv(temp, myargs); // runs word count
+                        printf("%d\n", ret);
+                    }
                 }
             }
             // strcat(path, myargs[0]);
@@ -934,28 +1014,6 @@ void solve(char **arg_arr, int arg_cnt)
     }
 }
 
-void free_memory()
-{
-    // free history linked list
-    struct HNode *hprev = NULL;
-    while (Hfirst != NULL)
-    {
-        hprev = Hfirst;
-        Hfirst = Hfirst->next;
-        free(hprev);
-    }
-
-    // free shell variables linked list
-    struct SNode *sprev = NULL;
-    while (Sfirst != NULL)
-    {
-        sprev = Sfirst;
-        Sfirst = Sfirst->next;
-        free(sprev);
-    }
-    // printf("freed memory\n");
-}
-
 // // Piazza @226
 // // constraints on the input like command length and number of arguments
 // #define MAXLINE 1024
@@ -969,8 +1027,8 @@ void free_memory()
 int main(int argc, char *argv[])
 {
     // entered process wsh
-    // setting environment variable of process-wsh to
-    // PATH=/bin as mentioned in write-up
+
+    // Your initial shell PATH environment variable should contain one directory: /bin
     setenv("PATH", "/bin", 1);
 
     // declarations for the getline() function
@@ -1086,6 +1144,9 @@ int main(int argc, char *argv[])
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
+            // comment out
+            str1 = NULL;
+
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
                 continue;
@@ -1099,7 +1160,7 @@ int main(int argc, char *argv[])
             }
 
             // ################### handle variable substitution ######################
-            char *str5 = strdup(input);
+            // char *str5 = strdup(input);
             char *sub_input = NULL;
             for (int i = 0; i < arg_cnt; i++)
             {
@@ -1107,7 +1168,7 @@ int main(int argc, char *argv[])
                 if (temp_token[0] == '$')
                 {
                     // printf("$ encountered\n");
-                    sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
+                    sub_input = variable_sub(i, arg_arr1, arg_cnt, input);
                 }
             }
             // if no $ encountered
@@ -1118,36 +1179,39 @@ int main(int argc, char *argv[])
 
             // ################### handle history ###################
             // create a deep copy of input
-            char *str2 = strdup(sub_input);
+            // char *str2 = strdup(sub_input);
             int used_history = 0;
-            char *actual_input = history_replace(str2, arg_arr1, arg_cnt, &used_history);
+            char *actual_input = history_replace(sub_input, arg_arr1, arg_cnt, &used_history);
 
             // only if needed record history
-            char *str3 = strdup(sub_input);
-            char input_copy[MAXLINE];
-            record_input(input_copy, str3);
+            // char *str3 = strdup(sub_input);
+            // char input_copy[MAXLINE];
+            // record_input(input_copy, str3);
             if (used_history == 0)
             {
-                record_history(input_copy, arg_arr1[0]);
+                // if command != history [n], only then record history
+                record_history(sub_input, arg_arr1[0]);
             }
 
             // execute the needed command
             // create a deep copy of input
-            char *str4 = strdup(actual_input);
+            // char *str4 = strdup(actual_input);
             char *arg_arr2[MAXARGS] = {NULL};
-            arg_cnt = arg_parse(str4, arg_arr2, " ");
+            arg_cnt = arg_parse(actual_input, arg_arr2, " ");
+            // comment out
+            input = NULL;
             solve(arg_arr2, arg_cnt);
 
-            free(str1);
-            str1 = NULL;
-            free(str2);
-            str2 = NULL;
-            free(str3);
-            str3 = NULL;
-            free(str4);
-            str4 = NULL;
-            free(str5);
-            str5 = NULL;
+            // free(str1);
+            // str1 = NULL;
+            // free(str2);
+            // str2 = NULL;
+            // free(str3);
+            // str3 = NULL;
+            // free(str4);
+            // str4 = NULL;
+            // free(str5);
+            // str5 = NULL;
 
             // for (int i = 0; arg_arr2[i] != NULL; i++)
             // {
@@ -1155,6 +1219,7 @@ int main(int argc, char *argv[])
             // }
 
             /// free(arg_arr2);
+            // free_input_tokens(arg_arr2, arg_cnt);
 
         } // while(1); //((len != -1));
     }
