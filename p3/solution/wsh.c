@@ -33,7 +33,7 @@ struct HNode
 };
 struct HNode *Hfirst = NULL;
 
-// Free Heap Memory
+// #################################  Free Heap Memory  ######################################
 void free_memory()
 {
     // free history linked list
@@ -218,6 +218,7 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
             }
             char *str = strdup(ptr->command);
             *flag = 1;
+            free(str2);
             return str;
         }
         else
@@ -299,6 +300,7 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 // ################################### Variable Substitution ##################################
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 {
+    // lose the dollar sign
     arg_arr[pos]++;
     // printf("%s\n", arg_arr[pos]);
     struct SNode *ptr = Sfirst;
@@ -308,6 +310,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
     env_var = getenv(arg_arr[pos]);
     if (env_var != NULL)
     {
+        // free(arg_arr[pos]);
         arg_arr[pos] = strdup(env_var);
     }
 
@@ -318,6 +321,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
         {
             if (strcmp(ptr->key, arg_arr[pos]) == 0)
             {
+                // free(arg_arr[pos]);
                 arg_arr[pos] = strdup(ptr->value);
                 break;
             }
@@ -327,7 +331,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
     // if word not found then ptr would reach the end of shell variables linked list
     if (ptr != NULL || env_var != NULL)
     {
-        char *modified = (char *)malloc(MAXLINE * sizeof(char *));
+        char *modified = (char *)malloc(MAXLINE * sizeof(char));
         strcpy(modified, arg_arr[0]);
         for (int i = 1; i < arg_cnt; i++)
         {
@@ -335,10 +339,12 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, arg_arr[i]);
         }
         // printf("New command becomes %s\n", modified);
+        free(str);
         return modified;
     }
     else
     {
+        // $word - word not found in both shell & env variables list
         return str;
     }
 }
@@ -460,7 +466,11 @@ int redirection(char **arg_arr, int arg_cnt)
             }
             dup2(file_desc, fd);
         }
+        // free the copy of last token
+        free(temp);
+        temp=NULL;
         // set the file name to NULL
+        free(arg_arr[arg_cnt - 1]);
         arg_arr[arg_cnt - 1] = NULL;
         close(file_desc);
         return 1;
@@ -499,9 +509,14 @@ void builtin_ls()
     return_code = 0;
 }
 
-void builtin_cd(char **arg_arr)
+void builtin_cd(char *arg_arr)
 {
-    int rc = chdir(arg_arr[1]);
+    // printf("Entered Builtin_cd\n");
+    char *token_cd = strdup(arg_arr);
+    int rc = chdir(token_cd);
+    // printf("chdir complete\n");
+    // free(token_cd);
+    // token_cd = NULL;
 
     if (rc == 0)
     {
@@ -523,7 +538,9 @@ void builtin_local(char *arg, int *shellvars_len)
 
     // parse the argument to local
     char *temp[2];
-    int cnt = arg_parse(arg, temp, "=");
+    char *token = strdup(arg);
+    int cnt = arg_parse(token, temp, "=");
+    token = NULL;
 
     // handle empty shell variable assignments
     if (cnt != 2)
@@ -619,8 +636,10 @@ void builtin_history()
 
 void builtin_export(char **arg_arr)
 {
-    char *env_var[2];
-    int cnt = arg_parse(arg_arr[1], env_var, "=");
+    char *env_var[2]={NULL};
+    char *token = strdup(arg_arr[1]);
+    int cnt = arg_parse(token, env_var, "=");
+    token = NULL;
     // handle empty shell variable assignments
     // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
     // {
@@ -641,6 +660,7 @@ void builtin_export(char **arg_arr)
         variable_sub(1, env_var, cnt, env_var[0]);
     }
     setenv(env_var[0], env_var[1], 1);
+    //free_input_tokens(env_var, cnt);
     return_code = 0;
 }
 
@@ -673,9 +693,14 @@ void solve(char **arg_arr, int arg_cnt)
     else if (strcmp(arg_arr[0], "cd") == 0)
     {
         // check if it takes only one argument
+        //printf("entered cd condition\n");
         if (arg_cnt == 2)
         {
-            builtin_cd(arg_arr);
+            //printf("entered if cnt=2 condition\n");
+            char *token = strdup(arg_arr[1]);
+            builtin_cd(token);
+            free(token);
+            token=NULL;
         }
         // more than 1 arguments to ls
         else
@@ -773,6 +798,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 // successful redirection
                 builtin_vars();
+                return_code = 0;
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
@@ -827,6 +853,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 // redirection successfull
                 builtin_history();
+                return_code=0;
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
@@ -843,6 +870,7 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_history();
+            return_code=0;
         }
         else
         {
@@ -864,6 +892,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 // redirection successful
                 builtin_ls();
+                return_code=0;
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
@@ -881,6 +910,7 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_ls();
+            return_code=0;
         }
         else
         {
@@ -909,7 +939,7 @@ void solve(char **arg_arr, int arg_cnt)
 
             for (int i = 0; i < arg_cnt; i++)
             {
-                myargs[i] = arg_arr[i];
+                myargs[i] = strdup(arg_arr[i]);
             }
             myargs[arg_cnt] = NULL; // marks end of array
             if (redirection(myargs, arg_cnt) == 2)
@@ -921,7 +951,7 @@ void solve(char **arg_arr, int arg_cnt)
                 execv(myargs[0], myargs); // runs word count
             }
 
-            printf("this shouldn't print out\n");
+            fprintf(stderr, "this shouldn't print out\n");
             // kill the child if the execv failed
             exit(-1);
         }
@@ -940,6 +970,10 @@ void solve(char **arg_arr, int arg_cnt)
     else // if(strcmp(arg_arr[0], "ps") == 0)
     {
         int rc = fork();
+
+        // container to store all possible PATHs
+        char *path_arg[100];
+        int path_cnt = 0;
         if (rc < 0)
         {
             // fork failed; exit
@@ -953,7 +987,7 @@ void solve(char **arg_arr, int arg_cnt)
             char *myargs[arg_cnt + 1];
             for (int i = 0; i < arg_cnt; i++)
             {
-                myargs[i] = arg_arr[i];
+                myargs[i] = strdup(arg_arr[i]);
             }
             myargs[arg_cnt] = NULL; // marks end of array
 
@@ -969,10 +1003,10 @@ void solve(char **arg_arr, int arg_cnt)
                 // path variable has the entire path string now.
                 path = getenv("PATH");
                 // printf("%s\n", path);
-                char *path_arg[100];
+                // char *path_arg[100];
 
                 // contains the number of added paths
-                int path_cnt = arg_parse(path, path_arg, ":");
+                path_cnt = arg_parse(path, path_arg, ":");
                 // printf("%d\n", path_cnt);
                 // loop over each added path
                 for (int i = 0; i < path_cnt; i++)
@@ -1011,7 +1045,11 @@ void solve(char **arg_arr, int arg_cnt)
             if (return_code > 0)
                 return_code = -1;
         }
+        // free_input_tokens(path_arg, path_cnt);
     }
+
+    // Crux lies here
+    // free_input_tokens(arg_arr, arg_cnt);
 }
 
 // // Piazza @226
@@ -1084,8 +1122,8 @@ int main(int argc, char *argv[])
             char *sub_input = NULL;
             for (int i = 0; i < arg_cnt; i++)
             {
-                char *temp_token = arg_arr1[i];
-                if (temp_token[0] == '$')
+                // char *temp_token = arg_arr1[i];
+                if (arg_arr1[i][0] == '$')
                 {
                     // printf("$ encountered\n");
                     sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
@@ -1129,9 +1167,15 @@ int main(int argc, char *argv[])
             printf("wsh> ");
             fflush(stdout);
             if ((len = getline(&input, &size, stdin)) == -1)
+            {
+                free(input);
+                input = NULL;
+                free_memory();
                 break;
+            }
+
             // printf("\n");
-            // remove new-line character that getline() reads by default
+            // remove \new-line character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
             {
                 input[strlen(input) - 1] = '\0';
@@ -1164,10 +1208,11 @@ int main(int argc, char *argv[])
             char *sub_input = NULL;
             for (int i = 0; i < arg_cnt; i++)
             {
-                char *temp_token = arg_arr1[i];
-                if (temp_token[0] == '$')
+                // char *temp_token = arg_arr1[i];
+                if (arg_arr1[i][0] == '$')
                 {
                     // printf("$ encountered\n");
+                    // input untouched in this function
                     sub_input = variable_sub(i, arg_arr1, arg_cnt, input);
                 }
             }
@@ -1190,16 +1235,24 @@ int main(int argc, char *argv[])
             if (used_history == 0)
             {
                 // if command != history [n], only then record history
-                record_history(sub_input, arg_arr1[0]);
+                record_history(actual_input, arg_arr1[0]);
             }
 
+            // comment out
+            //free_input_tokens(arg_arr1, arg_cnt);
             // execute the needed command
             // create a deep copy of input
             // char *str4 = strdup(actual_input);
             char *arg_arr2[MAXARGS] = {NULL};
             arg_cnt = arg_parse(actual_input, arg_arr2, " ");
+            
+            //free(actual_input);
+
+            //printf("input = %s\n sub_input=%s\n actual_input=%s\n", input, sub_input, actual_input);
             // comment out
             input = NULL;
+            actual_input =NULL;
+            sub_input=NULL;
             solve(arg_arr2, arg_cnt);
 
             // free(str1);
@@ -1219,7 +1272,8 @@ int main(int argc, char *argv[])
             // }
 
             /// free(arg_arr2);
-            // free_input_tokens(arg_arr2, arg_cnt);
+            // comment out
+            //free_input_tokens(arg_arr2, arg_cnt);
 
         } // while(1); //((len != -1));
     }

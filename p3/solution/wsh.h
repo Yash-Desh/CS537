@@ -12,7 +12,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str);
 int redirection(char **arg_arr, int arg_cnt);
 
 void builtin_ls();
-void builtin_cd(char **arg_arr);
+void builtin_cd(char *arg_arr);
 void builtin_local(char *arg, int *shellvars_len);
 void builtin_vars();
 void builtin_history();
