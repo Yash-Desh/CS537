@@ -218,7 +218,8 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
             }
             char *str = strdup(ptr->command);
             *flag = 1;
-            free(str2);
+            //free(str2);
+            //printf("history replace\n");
             return str;
         }
         else
@@ -1272,11 +1273,12 @@ int main(int argc, char *argv[])
             // ################### handle variable substitution ######################
             
             // char *str2 = strdup(actual_input);
-            // char **arg_arr2[MAXARGS] = {NULL};;
-            // if(used_history == 0)
+            // char *arg_arr2[MAXARGS] = {NULL};;
+            // if(used_history == 1)
             // {
             //      str2 = strdup(actual_input);
-            // 
+            //      arg_cnt = arg_parse(str2, arg_arr2, " ");
+            //      printf("used history & new command tokenized\n");
             // }
             
             
@@ -1314,16 +1316,19 @@ int main(int argc, char *argv[])
             solve(arg_arr3, arg_cnt);
 
             // release input, actual_input, sub_input
+            //printf("Nothing freed yet\n");
             if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
             {
                 free(input);
             }
+            //printf("Input freed\n");
 
             if (actual_input != NULL && strcmp(actual_input, sub_input) != 0)
             {
                 free(actual_input);
+                
             }
-
+            //printf("Actual Input freed\n");
             free(sub_input);
             sub_input = NULL;
             input = NULL;
