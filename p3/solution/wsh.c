@@ -94,6 +94,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
     if (history_size == 1 && history_cnt == 1 && func_flag == 1)
     {
         free(Hfirst);
+        free(Hfirst->command);
         Hfirst = NULL;
         Hcnt = 0;
         return;
@@ -132,6 +133,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
         {
             prev = temp;
             temp = temp->next;
+            free(prev->command);
             free(prev);
         }
         // modifiy Hcnt
@@ -486,6 +488,8 @@ int redirection(char **arg_arr, int arg_cnt)
     else
     {
         // no redirection symbol present
+        free(temp);
+        temp = NULL;
         return 0;
     }
 }
@@ -626,7 +630,7 @@ void builtin_vars()
     // printf("entered builtin_vars function\n");
     if (Sfirst == NULL)
     {
-        printf("No shell variable\n");
+        fprintf(stderr,"No shell variable\n");
     }
     struct SNode *ptr = Sfirst;
     while (ptr != NULL)
