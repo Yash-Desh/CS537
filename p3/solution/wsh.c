@@ -218,8 +218,8 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
             }
             char *str = strdup(ptr->command);
             *flag = 1;
-            //free(str2);
-            //printf("history replace\n");
+            // free(str2);
+            // printf("history replace\n");
             return str;
         }
         else
@@ -1165,23 +1165,54 @@ int main(int argc, char *argv[])
             }
 
             // ################### handle variable substitution ######################
-            // char *str5 = strdup(input);
+
+            char *str2 = NULL;
+            char *arg_arr2[MAXARGS] = {NULL};
+            if (used_history == 1)
+            {
+                str2 = strdup(actual_input);
+                arg_cnt = arg_parse(str2, arg_arr2, " ");
+                // printf("used history & new command tokenized\n");
+            }
             char *sub_input = NULL;
 
             // loop to find a '$' symbol
-            for (int i = 0; i < arg_cnt; i++)
+            if (used_history == 0)
             {
-                // substitute variable for every '$' found
-                if (arg_arr1[i][0] == '$')
+                for (int i = 0; i < arg_cnt; i++)
                 {
-                    // in case of multiple '$', release previously allocated memory
-                    if (sub_input != NULL)
+                    // substitute variable for every '$' found
+
+                    if (arg_arr1[i][0] == '$')
                     {
-                        free(sub_input);
-                        sub_input = NULL;
+                        // in case of multiple '$', release previously allocated memory
+                        if (sub_input != NULL)
+                        {
+                            free(sub_input);
+                            sub_input = NULL;
+                        }
+                        // input untouched in this function
+                        sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
                     }
-                    // input untouched in this function
-                    sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
+                }
+            }
+            else if (used_history == 1)
+            {
+                for (int i = 0; i < arg_cnt; i++)
+                {
+                    // substitute variable for every '$' found
+
+                    if (arg_arr2[i][0] == '$')
+                    {
+                        // in case of multiple '$', release previously allocated memory
+                        if (sub_input != NULL)
+                        {
+                            free(sub_input);
+                            sub_input = NULL;
+                        }
+                        // input untouched in this function
+                        sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
+                    }
                 }
             }
             if (sub_input == NULL)
@@ -1191,11 +1222,19 @@ int main(int argc, char *argv[])
 
             // I think post this point I no longer use str1
             free(str1);
+            if (str2 != NULL)
+            {
+                free(str2);
+            }
+
+            // ################################ Handle Command ###################################
 
             // Tokenise the history-replaced variable-substituted input
-            char *arg_arr2[MAXARGS] = {NULL};
-            arg_cnt = arg_parse(sub_input, arg_arr2, " ");
-            solve(arg_arr2, arg_cnt);
+            char *arg_arr3[MAXARGS] = {NULL};
+            arg_cnt = arg_parse(sub_input, arg_arr3, " ");
+            solve(arg_arr3, arg_cnt);
+
+            // ################################ Release Memory ####################################
 
             // release input, actual_input, sub_input
             if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
@@ -1271,33 +1310,56 @@ int main(int argc, char *argv[])
             }
 
             // ################### handle variable substitution ######################
-            
-            // char *str2 = strdup(actual_input);
-            // char *arg_arr2[MAXARGS] = {NULL};;
-            // if(used_history == 1)
-            // {
-            //      str2 = strdup(actual_input);
-            //      arg_cnt = arg_parse(str2, arg_arr2, " ");
-            //      printf("used history & new command tokenized\n");
-            // }
-            
-            
+
+            char *str2 = NULL;
+            char *arg_arr2[MAXARGS] = {NULL};
+            if (used_history == 1)
+            {
+                str2 = strdup(actual_input);
+                arg_cnt = arg_parse(str2, arg_arr2, " ");
+                // printf("used history & new command tokenized\n");
+            }
+            // printf("new block ran\n");
+
             char *sub_input = NULL;
 
             // loop to find a '$' symbol
-            for (int i = 0; i < arg_cnt; i++)
+            if (used_history == 0)
             {
-                // substitute variable for every '$' found
-                if (arg_arr1[i][0] == '$')
+                for (int i = 0; i < arg_cnt; i++)
                 {
-                    // in case of multiple '$', release previously allocated memory
-                    if (sub_input != NULL)
+                    // substitute variable for every '$' found
+
+                    if (arg_arr1[i][0] == '$')
                     {
-                        free(sub_input);
-                        sub_input = NULL;
+                        // in case of multiple '$', release previously allocated memory
+                        if (sub_input != NULL)
+                        {
+                            free(sub_input);
+                            sub_input = NULL;
+                        }
+                        // input untouched in this function
+                        sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
                     }
-                    // input untouched in this function
-                    sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
+                }
+            }
+            else if (used_history == 1)
+            {
+                for (int i = 0; i < arg_cnt; i++)
+                {
+                    // substitute variable for every '$' found
+
+                    if (arg_arr2[i][0] == '$')
+                    {
+                        // in case of multiple '$', release previously allocated memory
+                        if (sub_input != NULL)
+                        {
+                            free(sub_input);
+                            sub_input = NULL;
+                        }
+                        // input untouched in this function
+                        sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
+                    }
                 }
             }
             // No '$' symbol found
@@ -1308,27 +1370,33 @@ int main(int argc, char *argv[])
 
             // I think post this point I no longer use str1
             free(str1);
+            if (str2 != NULL)
+            {
+                free(str2);
+            }
+
+            // ################################ Handle Command ###################################
 
             // Tokenise the history-replaced variable-substituted input
             char *arg_arr3[MAXARGS] = {NULL};
             arg_cnt = arg_parse(sub_input, arg_arr3, " ");
-
             solve(arg_arr3, arg_cnt);
 
+            // ################################ Release Memory ####################################
+
             // release input, actual_input, sub_input
-            //printf("Nothing freed yet\n");
+            // printf("Nothing freed yet\n");
             if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
             {
                 free(input);
             }
-            //printf("Input freed\n");
+            // printf("Input freed\n");
 
             if (actual_input != NULL && strcmp(actual_input, sub_input) != 0)
             {
                 free(actual_input);
-                
             }
-            //printf("Actual Input freed\n");
+            // printf("Actual Input freed\n");
             free(sub_input);
             sub_input = NULL;
             input = NULL;
