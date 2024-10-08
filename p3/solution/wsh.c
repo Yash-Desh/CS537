@@ -42,6 +42,7 @@ void free_memory()
     {
         hprev = Hfirst;
         Hfirst = Hfirst->next;
+        free(hprev->command);
         free(hprev);
     }
 
@@ -51,6 +52,8 @@ void free_memory()
     {
         sprev = Sfirst;
         Sfirst = Sfirst->next;
+        free(sprev->key);
+        free(sprev->value);
         free(sprev);
     }
     // printf("freed memory\n");
@@ -197,11 +200,8 @@ void record_history(char *arg, char *firstarg)
 
 char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 {
-    // step-1 parse the input_ptr
-    // char *input_tokens[MAXARGS] = {NULL};
-    // int arg_cnt = arg_parse(input_copy, input_tokens, " ");
-
     // compare if 1st term = "history"
+    // checking for format "history [n]"
     if (arg_cnt > 1 && strcmp(input_tokens[0], "history") == 0)
     {
         // check if 2nd token is a valid number command_no
@@ -233,6 +233,13 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
         // if command doesn't start with "history"
         return str2;
     }
+}
+
+// ################################## alphasort ####################################
+
+int mysort(const struct dirent **a, const struct dirent **b)
+{
+    return strcmp((*a)->d_name, (*b)->d_name);
 }
 
 // ######################################## Parsers ##############################################
@@ -338,8 +345,8 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, " ");
             strcat(modified, arg_arr[i]);
         }
-        // printf("New command becomes %s\n", modified);
-        free(str);
+        // release the strdup of the found variable value
+        free(arg_arr[pos]);
         return modified;
     }
     else
@@ -468,7 +475,7 @@ int redirection(char **arg_arr, int arg_cnt)
         }
         // free the copy of last token
         free(temp);
-        temp=NULL;
+        temp = NULL;
         // set the file name to NULL
         free(arg_arr[arg_cnt - 1]);
         arg_arr[arg_cnt - 1] = NULL;
@@ -490,7 +497,7 @@ void builtin_ls()
     // char** fileList;
     struct dirent **fileListTemp;
     char *path = ".";
-    no_of_files = scandir(path, &fileListTemp, NULL, alphasort);
+    no_of_files = scandir(path, &fileListTemp, NULL, mysort);
     // printf("no of files : %d\n", no_of_files);
     for (int i = 0; i < no_of_files; i++)
     {
@@ -515,8 +522,8 @@ void builtin_cd(char *arg_arr)
     char *token_cd = strdup(arg_arr);
     int rc = chdir(token_cd);
     // printf("chdir complete\n");
-    // free(token_cd);
-    // token_cd = NULL;
+    free(token_cd);
+    token_cd = NULL;
 
     if (rc == 0)
     {
@@ -540,7 +547,7 @@ void builtin_local(char *arg, int *shellvars_len)
     char *temp[2];
     char *token = strdup(arg);
     int cnt = arg_parse(token, temp, "=");
-    token = NULL;
+    // token = NULL;
 
     // handle empty shell variable assignments
     if (cnt != 2)
@@ -562,7 +569,18 @@ void builtin_local(char *arg, int *shellvars_len)
 
         if (strcmp(ptr->key, temp[0]) == 0)
         {
+            // release the previous value
+            free(ptr->value);
+            ptr->value = NULL;
+
+            // assign new value
             ptr->value = strdup(temp[1]);
+
+            // release token
+            free(token);
+            token = NULL;
+
+            // return code=0 for successfull operation
             return_code = 0;
             return;
         }
@@ -597,7 +615,8 @@ void builtin_local(char *arg, int *shellvars_len)
     }
     // debug statements : to be removed
     (*shellvars_len)++;
-    // printf("Number of shell variables = %d\n", *shellvars_len);
+    free(token);
+    token = NULL;
     return_code = 0;
 }
 
@@ -636,10 +655,11 @@ void builtin_history()
 
 void builtin_export(char **arg_arr)
 {
-    char *env_var[2]={NULL};
+    // create copy of 'a=b' for usage within function
+    char *env_var[2] = {NULL};
     char *token = strdup(arg_arr[1]);
     int cnt = arg_parse(token, env_var, "=");
-    token = NULL;
+
     // handle empty shell variable assignments
     // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
     // {
@@ -660,7 +680,10 @@ void builtin_export(char **arg_arr)
         variable_sub(1, env_var, cnt, env_var[0]);
     }
     setenv(env_var[0], env_var[1], 1);
-    //free_input_tokens(env_var, cnt);
+
+    // release token created for usage within this function
+    free(token);
+    token = NULL;
     return_code = 0;
 }
 
@@ -677,8 +700,9 @@ void solve(char **arg_arr, int arg_cnt)
             // It is an error to pass any arguments to exit
 
             // printf("Called exit with code %d\n", return_code);
-            free_input_tokens(arg_arr, arg_cnt);
+            // free_input_tokens(arg_arr, arg_cnt);
             free_memory();
+            free(arg_arr[0]);
             exit(return_code);
         }
 
@@ -693,14 +717,15 @@ void solve(char **arg_arr, int arg_cnt)
     else if (strcmp(arg_arr[0], "cd") == 0)
     {
         // check if it takes only one argument
-        //printf("entered cd condition\n");
+        // printf("entered cd condition\n");
         if (arg_cnt == 2)
         {
-            //printf("entered if cnt=2 condition\n");
+            // printf("entered if cnt=2 condition\n");
             char *token = strdup(arg_arr[1]);
             builtin_cd(token);
+            // printf("built-in cd call complete\n");
             free(token);
-            token=NULL;
+            token = NULL;
         }
         // more than 1 arguments to ls
         else
@@ -853,7 +878,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 // redirection successfull
                 builtin_history();
-                return_code=0;
+                return_code = 0;
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
@@ -870,7 +895,7 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_history();
-            return_code=0;
+            return_code = 0;
         }
         else
         {
@@ -892,7 +917,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 // redirection successful
                 builtin_ls();
-                return_code=0;
+                return_code = 0;
                 dup2(saved_stdin, 0);
                 dup2(saved_stdout, 1);
                 dup2(saved_stderr, 2);
@@ -910,7 +935,7 @@ void solve(char **arg_arr, int arg_cnt)
         else if (arg_cnt == 1)
         {
             builtin_ls();
-            return_code=0;
+            return_code = 0;
         }
         else
         {
@@ -1080,6 +1105,10 @@ int main(int argc, char *argv[])
         // open argv[1] as a file
         FILE *file_ptr = NULL;
         file_ptr = fopen(argv[1], "r");
+        if (file_ptr == NULL)
+        {
+            return -1;
+        }
         // printf("Entered Batch mode\n");
         // while ((len = getline(&input, &size, file_ptr)) != -1)
         while (1)
@@ -1089,7 +1118,12 @@ int main(int argc, char *argv[])
             // printf("wsh> ");
             // fflush(stdout);
             if ((len = getline(&input, &size, file_ptr)) == -1)
+            {
+                free(input);
+                input = NULL;
+                free_memory();
                 break;
+            }
             // printf("\n");
             // remove new-line character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
@@ -1117,44 +1151,66 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            // ################### handle history ###################
+
+            // history_replace() sets used_history=1 if command of format "history [n]"
+            int used_history = 0;
+            char *actual_input = history_replace(input, arg_arr1, arg_cnt, &used_history);
+
+            // record history if command is NOT of format "history [n]"
+            if (used_history == 0)
+            {
+                record_history(actual_input, arg_arr1[0]);
+            }
+
             // ################### handle variable substitution ######################
-            char *str5 = strdup(input);
+            // char *str5 = strdup(input);
             char *sub_input = NULL;
+
+            // loop to find a '$' symbol
             for (int i = 0; i < arg_cnt; i++)
             {
-                // char *temp_token = arg_arr1[i];
+                // substitute variable for every '$' found
                 if (arg_arr1[i][0] == '$')
                 {
-                    // printf("$ encountered\n");
-                    sub_input = variable_sub(i, arg_arr1, arg_cnt, str5);
+                    // in case of multiple '$', release previously allocated memory
+                    if (sub_input != NULL)
+                    {
+                        free(sub_input);
+                        sub_input = NULL;
+                    }
+                    // input untouched in this function
+                    sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
                 }
             }
             if (sub_input == NULL)
             {
-                sub_input = input;
+                sub_input = actual_input;
             }
 
-            // ################### handle history ###################
-            // create a deep copy of input
-            char *str2 = strdup(sub_input);
-            int used_history = 0;
-            char *actual_input = history_replace(str2, arg_arr1, arg_cnt, &used_history);
+            // I think post this point I no longer use str1
+            free(str1);
 
-            // only if needed record history
-            char *str3 = strdup(sub_input);
-            char input_copy[MAXLINE];
-            record_input(input_copy, str3);
-            if (used_history == 0)
-            {
-                record_history(input_copy, arg_arr1[0]);
-            }
-
-            // execute the needed command
-            // create a deep copy of input
-            char *str4 = strdup(actual_input);
+            // Tokenise the history-replaced variable-substituted input
             char *arg_arr2[MAXARGS] = {NULL};
-            arg_cnt = arg_parse(str4, arg_arr2, " ");
+            arg_cnt = arg_parse(sub_input, arg_arr2, " ");
             solve(arg_arr2, arg_cnt);
+
+            // release input, actual_input, sub_input
+            if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
+            {
+                free(input);
+            }
+
+            if (actual_input != NULL && strcmp(actual_input, sub_input) != 0)
+            {
+                free(actual_input);
+            }
+
+            free(sub_input);
+            sub_input = NULL;
+            input = NULL;
+            actual_input = NULL;
         }
         fclose(file_ptr);
     }
@@ -1174,8 +1230,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            // printf("\n");
-            // remove \new-line character that getline() reads by default
+            // remove \n character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
             {
                 input[strlen(input) - 1] = '\0';
@@ -1188,94 +1243,92 @@ int main(int argc, char *argv[])
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
-            // comment out
-            str1 = NULL;
+            // free str1 somewhere
 
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
                 continue;
 
             // ####################### Handle comments ###############################
-            // char *comment_token = arg_arr1[0];
+            // Ignore all lines starting with #
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as interactive comment\n");
                 continue;
             }
 
-            // ################### handle variable substitution ######################
-            // char *str5 = strdup(input);
-            char *sub_input = NULL;
-            for (int i = 0; i < arg_cnt; i++)
-            {
-                // char *temp_token = arg_arr1[i];
-                if (arg_arr1[i][0] == '$')
-                {
-                    // printf("$ encountered\n");
-                    // input untouched in this function
-                    sub_input = variable_sub(i, arg_arr1, arg_cnt, input);
-                }
-            }
-            // if no $ encountered
-            if (sub_input == NULL)
-            {
-                sub_input = input;
-            }
-
             // ################### handle history ###################
-            // create a deep copy of input
-            // char *str2 = strdup(sub_input);
-            int used_history = 0;
-            char *actual_input = history_replace(sub_input, arg_arr1, arg_cnt, &used_history);
 
-            // only if needed record history
-            // char *str3 = strdup(sub_input);
-            // char input_copy[MAXLINE];
-            // record_input(input_copy, str3);
+            int used_history = 0;
+            char *actual_input = history_replace(input, arg_arr1, arg_cnt, &used_history);
+
+            // record history if command is NOT of format "history [n]"
             if (used_history == 0)
             {
                 // if command != history [n], only then record history
                 record_history(actual_input, arg_arr1[0]);
             }
 
-            // comment out
-            //free_input_tokens(arg_arr1, arg_cnt);
-            // execute the needed command
-            // create a deep copy of input
-            // char *str4 = strdup(actual_input);
-            char *arg_arr2[MAXARGS] = {NULL};
-            arg_cnt = arg_parse(actual_input, arg_arr2, " ");
+            // ################### handle variable substitution ######################
             
-            //free(actual_input);
-
-            //printf("input = %s\n sub_input=%s\n actual_input=%s\n", input, sub_input, actual_input);
-            // comment out
-            input = NULL;
-            actual_input =NULL;
-            sub_input=NULL;
-            solve(arg_arr2, arg_cnt);
-
-            // free(str1);
-            // str1 = NULL;
-            // free(str2);
-            // str2 = NULL;
-            // free(str3);
-            // str3 = NULL;
-            // free(str4);
-            // str4 = NULL;
-            // free(str5);
-            // str5 = NULL;
-
-            // for (int i = 0; arg_arr2[i] != NULL; i++)
+            // char *str2 = strdup(actual_input);
+            // char **arg_arr2[MAXARGS] = {NULL};;
+            // if(used_history == 0)
             // {
-            //     free(arg_arr2[i]);
+            //      str2 = strdup(actual_input);
+            // 
             // }
+            
+            
+            char *sub_input = NULL;
 
-            /// free(arg_arr2);
-            // comment out
-            //free_input_tokens(arg_arr2, arg_cnt);
+            // loop to find a '$' symbol
+            for (int i = 0; i < arg_cnt; i++)
+            {
+                // substitute variable for every '$' found
+                if (arg_arr1[i][0] == '$')
+                {
+                    // in case of multiple '$', release previously allocated memory
+                    if (sub_input != NULL)
+                    {
+                        free(sub_input);
+                        sub_input = NULL;
+                    }
+                    // input untouched in this function
+                    sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
+                }
+            }
+            // No '$' symbol found
+            if (sub_input == NULL)
+            {
+                sub_input = actual_input;
+            }
 
-        } // while(1); //((len != -1));
+            // I think post this point I no longer use str1
+            free(str1);
+
+            // Tokenise the history-replaced variable-substituted input
+            char *arg_arr3[MAXARGS] = {NULL};
+            arg_cnt = arg_parse(sub_input, arg_arr3, " ");
+
+            solve(arg_arr3, arg_cnt);
+
+            // release input, actual_input, sub_input
+            if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
+            {
+                free(input);
+            }
+
+            if (actual_input != NULL && strcmp(actual_input, sub_input) != 0)
+            {
+                free(actual_input);
+            }
+
+            free(sub_input);
+            sub_input = NULL;
+            input = NULL;
+            actual_input = NULL;
+        }
     }
 
     else
@@ -1285,7 +1338,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    free(input);
+    // free(input);
     input = NULL;
     free_memory();
     // printf("Before returning main %d\n", return_code);
