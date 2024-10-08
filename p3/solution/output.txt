@@ -1,1 +1,4 @@
-hello
+    PID TTY          TIME CMD
+1333977 pts/6    00:00:00 bash
+1397643 pts/6    00:00:00 memcheck-amd64-
+1397838 pts/6    00:00:00 ps

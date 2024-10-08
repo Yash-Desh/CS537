@@ -287,7 +287,14 @@ int arg_parse(char *str, char **arg_arr, char *delims)
     // Returns pointer to first token
     char *token = strtok(str, delims);
 
+    // [e c h o \0 h e l l o \0]
+    //  ^
+    //          ^
     // count the number of arguments
+    // arg_arr[0] = tok
+    // [0] ->  [ e c h o \0]
+
+    // wsh> echo $a <-- "echo" "$a" -> "echo" "ps" -> exec "echo" <-args [echo,ps] --> ps
     int arg_cnt = 0;
 
     // Keep counting tokens while one of the
@@ -310,36 +317,54 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 // ################################### Variable Substitution ##################################
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 {
-    // lose the dollar sign
-    arg_arr[pos]++;
-    // printf("%s\n", arg_arr[pos]);
+    // flag to check if variable substitution has been done on the tokens
+    int sub_flag =0;
+    // create pointer to the shell variables Linked list
     struct SNode *ptr = Sfirst;
-
-    // search in environment variables
-    char *env_var = NULL;
-    env_var = getenv(arg_arr[pos]);
-    if (env_var != NULL)
+    // loop over all tokens & find '$' at the 0th index
+    for (int i = 0; i < arg_cnt; i++)
     {
-        // free(arg_arr[pos]);
-        arg_arr[pos] = strdup(env_var);
-    }
-
-    // search in shell variables
-    else
-    {
-        while (ptr != NULL)
+        if (arg_arr[i][0] == '$')
         {
-            if (strcmp(ptr->key, arg_arr[pos]) == 0)
+            // '$' found at token i
+            pos = i;
+            // lose the dollar sign
+            arg_arr[pos]++;
+            // printf("%s\n", arg_arr[pos]);
+
+            // search in environment variables
+            char *env_var = NULL;
+            env_var = getenv(arg_arr[pos]);
+            if (env_var != NULL)
             {
                 // free(arg_arr[pos]);
-                arg_arr[pos] = strdup(ptr->value);
-                break;
+                //arg_arr[pos] = strdup(env_var);
+                arg_arr[pos] = env_var;
+                sub_flag = 1;
             }
-            ptr = ptr->next;
+
+            // search in shell variables
+            else
+            {
+                ptr = Sfirst;
+                while (ptr != NULL)
+                {
+                    if (strcmp(ptr->key, arg_arr[pos]) == 0)
+                    {
+                        // free(arg_arr[pos]);
+                        //arg_arr[pos] = strdup(ptr->value);
+                        arg_arr[pos] = ptr->value;
+                        sub_flag=1;
+                        break;
+                    }
+                    ptr = ptr->next;
+                }
+            }
         }
     }
+
     // if word not found then ptr would reach the end of shell variables linked list
-    if (ptr != NULL || env_var != NULL)
+    if (sub_flag==1)
     {
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
         strcpy(modified, arg_arr[0]);
@@ -349,7 +374,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, arg_arr[i]);
         }
         // release the strdup of the found variable value
-        free(arg_arr[pos]);
+        //free(arg_arr[pos]);
         return modified;
     }
     else
@@ -565,7 +590,8 @@ void builtin_local(char *arg, int *shellvars_len)
     {
         // tokenize for :
         // printf("$ encountered in local command\n");
-        variable_sub(1, temp, cnt, temp[0]);
+        char *ret_token = variable_sub(1, temp, cnt, temp[0]);
+        free(ret_token);
     }
 
     // if shell variable is already present
@@ -630,7 +656,7 @@ void builtin_vars()
     // printf("entered builtin_vars function\n");
     if (Sfirst == NULL)
     {
-        fprintf(stderr,"No shell variable\n");
+        fprintf(stderr, "No shell variable\n");
     }
     struct SNode *ptr = Sfirst;
     while (ptr != NULL)
@@ -682,7 +708,8 @@ void builtin_export(char **arg_arr)
     {
         // tokenize for :
         // printf("$ encountered in local command\n");
-        variable_sub(1, env_var, cnt, env_var[0]);
+        char *ret_token = variable_sub(1, env_var, cnt, env_var[0]);
+        free(ret_token);
     }
     setenv(env_var[0], env_var[1], 1);
 
@@ -1183,41 +1210,43 @@ int main(int argc, char *argv[])
             // loop to find a '$' symbol
             if (used_history == 0)
             {
-                for (int i = 0; i < arg_cnt; i++)
-                {
-                    // substitute variable for every '$' found
+                sub_input = variable_sub(1, arg_arr1, arg_cnt, actual_input);
+                // for (int i = 0; i < arg_cnt; i++)
+                // {
+                //     // substitute variable for every '$' found
 
-                    if (arg_arr1[i][0] == '$')
-                    {
-                        // in case of multiple '$', release previously allocated memory
-                        if (sub_input != NULL)
-                        {
-                            free(sub_input);
-                            sub_input = NULL;
-                        }
-                        // input untouched in this function
-                        sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
-                    }
-                }
+                //     if (arg_arr1[i][0] == '$')
+                //     {
+                //         // in case of multiple '$', release previously allocated memory
+                //         if (sub_input != NULL)
+                //         {
+                //             free(sub_input);
+                //             sub_input = NULL;
+                //         }
+                //         // input untouched in this function
+                //         sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
+                //     }
+                // }
             }
             else if (used_history == 1)
             {
-                for (int i = 0; i < arg_cnt; i++)
-                {
-                    // substitute variable for every '$' found
+                sub_input = variable_sub(1, arg_arr2, arg_cnt, actual_input);
+                // for (int i = 0; i < arg_cnt; i++)
+                // {
+                //     // substitute variable for every '$' found
 
-                    if (arg_arr2[i][0] == '$')
-                    {
-                        // in case of multiple '$', release previously allocated memory
-                        if (sub_input != NULL)
-                        {
-                            free(sub_input);
-                            sub_input = NULL;
-                        }
-                        // input untouched in this function
-                        sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
-                    }
-                }
+                //     if (arg_arr2[i][0] == '$')
+                //     {
+                //         // in case of multiple '$', release previously allocated memory
+                //         if (sub_input != NULL)
+                //         {
+                //             free(sub_input);
+                //             sub_input = NULL;
+                //         }
+                //         // input untouched in this function
+                //         sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
+                //     }
+                // }
             }
             if (sub_input == NULL)
             {
@@ -1330,47 +1359,55 @@ int main(int argc, char *argv[])
             // loop to find a '$' symbol
             if (used_history == 0)
             {
-                for (int i = 0; i < arg_cnt; i++)
-                {
-                    // substitute variable for every '$' found
+                sub_input = variable_sub(1, arg_arr1, arg_cnt, actual_input);
+                // char *copy_input = NULL;
+                // for (int i = 0; i < arg_cnt; i++)
+                // {
+                //     // substitute variable for every '$' found
 
-                    if (arg_arr1[i][0] == '$')
-                    {
-                        // in case of multiple '$', release previously allocated memory
-                        if (sub_input != NULL)
-                        {
-                            free(sub_input);
-                            sub_input = NULL;
-                        }
-                        // input untouched in this function
-                        sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
-                    }
-                }
+                //     if (arg_arr1[i][0] == '$')
+                //     {
+                //         // in case of multiple '$', release previously allocated memory
+                //         if (sub_input != NULL)
+                //         {
+                //             copy_input = strdup(sub_input);
+                //             free(sub_input);
+                //             sub_input = NULL;
+                //             sub_input = variable_sub(i, arg_arr1, arg_cnt, copy_input);
+                //         }
+                //         // input untouched in this function
+                //         else
+                //             sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
+                //     }
+                // }
             }
             else if (used_history == 1)
             {
-                for (int i = 0; i < arg_cnt; i++)
-                {
-                    // substitute variable for every '$' found
+                sub_input = variable_sub(1, arg_arr2, arg_cnt, actual_input);
+                // for (int i = 0; i < arg_cnt; i++)
+                // {
+                //     // substitute variable for every '$' found
 
-                    if (arg_arr2[i][0] == '$')
-                    {
-                        // in case of multiple '$', release previously allocated memory
-                        if (sub_input != NULL)
-                        {
-                            free(sub_input);
-                            sub_input = NULL;
-                        }
-                        // input untouched in this function
-                        sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
-                    }
-                }
+                //     if (arg_arr2[i][0] == '$')
+                //     {
+                //         // in case of multiple '$', release previously allocated memory
+                //         if (sub_input != NULL)
+                //         {
+                //             free(sub_input);
+                //             sub_input = NULL;
+                //         }
+                //         // input untouched in this function
+                //         sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
+                //     }
+                // }
             }
             // No '$' symbol found
             if (sub_input == NULL)
             {
                 sub_input = actual_input;
             }
+
+            // printf("sub_input = %s\n", sub_input);
 
             // I think post this point I no longer use str1
             free(str1);
