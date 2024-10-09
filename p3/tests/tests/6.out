@@ -1,9 +1,8 @@
 Makefile
 Nnum
 Nnum.c
-file.txt
 input.txt
-mydir
+out.txt
 output.txt
 script.wsh
 test

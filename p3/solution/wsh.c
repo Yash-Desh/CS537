@@ -93,8 +93,9 @@ void prune_history(int history_size, int history_cnt, int func_flag)
     // Corner case : history size = 1, history count = 1, prune_history() called from record_history()
     if (history_size == 1 && history_cnt == 1 && func_flag == 1)
     {
-        free(Hfirst);
         free(Hfirst->command);
+        free(Hfirst);
+        
         Hfirst = NULL;
         Hcnt = 0;
         return;
@@ -152,6 +153,11 @@ void prune_history(int history_size, int history_cnt, int func_flag)
 void change_history_size(char *n)
 {
     int newsize = atoi(n);
+    if(newsize <= 0)
+    {
+        return_code = -1;
+        return;
+    }
     Hsize = newsize;
     prune_history(newsize, Hcnt, 0);
     // printf("History size changed to %d\n", Hsize);
@@ -441,7 +447,7 @@ int redirection(char **arg_arr, int arg_cnt)
         if (temp[pos] == '<')
         {
             temp2 = temp + pos + 1;
-            file_desc = open(temp2, O_CREAT | O_RDONLY, 0777);
+            file_desc = open(temp2, O_CREAT | O_RDONLY, 0666);
             if (pos == 0)
             {
                 fd = STDIN_FILENO;
@@ -458,12 +464,12 @@ int redirection(char **arg_arr, int arg_cnt)
             if (temp[pos + 1] == '>' && temp[pos + 2] == '>')
             {
                 temp2 = temp + 3;
-                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
             }
             else if (temp[pos + 1] == '>')
             {
                 temp2 = temp + 2;
-                file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0777);
+                file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0666);
             }
             dup2(file_desc, STDOUT_FILENO);
             dup2(file_desc, STDERR_FILENO);
@@ -476,12 +482,12 @@ int redirection(char **arg_arr, int arg_cnt)
                 if (temp[pos] == '>' && temp[pos + 1] == '>')
                 {
                     temp2 = temp + 2;
-                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
                 }
                 else if (temp[pos] == '>')
                 {
                     temp2 = temp + 1;
-                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0666);
                 }
                 fd = STDOUT_FILENO;
             }
@@ -490,12 +496,12 @@ int redirection(char **arg_arr, int arg_cnt)
                 if (temp[pos] == '>' && temp[pos + 1] == '>')
                 {
                     temp2 = temp + pos + 2;
-                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0777);
+                    file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
                 }
                 else if (temp[pos] == '>')
                 {
                     temp2 = temp + pos + 1;
-                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+                    file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0666);
                 }
                 fd = n;
             }
@@ -563,7 +569,7 @@ void builtin_cd(char *arg_arr)
     else
     {
         // chdir unsuccessful
-        fprintf(stderr, "chdir error\n");
+        //fprintf(stderr, "chdir error\n");
         return_code = -1;
     }
 }
@@ -654,10 +660,10 @@ void builtin_local(char *arg, int *shellvars_len)
 void builtin_vars()
 {
     // printf("entered builtin_vars function\n");
-    if (Sfirst == NULL)
-    {
-        fprintf(stderr, "No shell variable\n");
-    }
+    // if (Sfirst == NULL)
+    // {
+    //     //fprintf(stderr, "No shell variable\n");
+    // }
     struct SNode *ptr = Sfirst;
     while (ptr != NULL)
     {
@@ -985,8 +991,9 @@ void solve(char **arg_arr, int arg_cnt)
         if (rc < 0)
         {
             // fork failed; exit
-            fprintf(stderr, "fork failed\n");
-            exit(1);
+            // fprintf(stderr, "fork failed\n");
+            return_code = -1;
+            // exit(1);
         }
         else if (rc == 0)
         {
@@ -1008,7 +1015,7 @@ void solve(char **arg_arr, int arg_cnt)
                 execv(myargs[0], myargs); // runs word count
             }
 
-            fprintf(stderr, "this shouldn't print out\n");
+            //fprintf(stderr, "No such file or directory\n");
             // kill the child if the execv failed
             exit(-1);
         }
@@ -1034,8 +1041,9 @@ void solve(char **arg_arr, int arg_cnt)
         if (rc < 0)
         {
             // fork failed; exit
-            fprintf(stderr, "fork failed\n");
-            exit(1);
+            //fprintf(stderr, "fork failed\n");
+            return_code = -1;
+            // exit(1);
         }
         else if (rc == 0)
         {
@@ -1068,7 +1076,7 @@ void solve(char **arg_arr, int arg_cnt)
                 // loop over each added path
                 for (int i = 0; i < path_cnt; i++)
                 {
-                    char temp[1000];
+                    char temp[1024];
                     strcpy(temp, path_arg[i]);
                     // printf("%s\n", temp);
                     strcat(temp, "/");
@@ -1086,7 +1094,7 @@ void solve(char **arg_arr, int arg_cnt)
             // printf("%s\n", path);
 
             // check errno & perror
-            // printf("%s: command not found\n", myargs[0]);
+            // fprintf(stderr ,"command not found\n");
             // in case failed exec, the child needs to be killed
             exit(-1);
         }
@@ -1320,13 +1328,17 @@ int main(int argc, char *argv[])
 
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
+            {
+                free(str1);
                 continue;
+            }
 
             // ####################### Handle comments ###############################
             // Ignore all lines starting with #
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as interactive comment\n");
+                free(str1);
                 continue;
             }
 
