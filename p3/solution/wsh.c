@@ -95,7 +95,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
     {
         free(Hfirst->command);
         free(Hfirst);
-        
+
         Hfirst = NULL;
         Hcnt = 0;
         return;
@@ -210,7 +210,7 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 {
     // compare if 1st term = "history"
     // checking for format "history [n]"
-    if (arg_cnt > 1 && strcmp(input_tokens[0], "history") == 0)
+    if (arg_cnt == 2 && strcmp(input_tokens[0], "history") == 0)
     {
         // check if 2nd token is a valid number command_no
         int command_no = atoi(input_tokens[1]);
@@ -324,7 +324,7 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 {
     // flag to check if variable substitution has been done on the tokens
-    int sub_flag =0;
+    int sub_flag = 0;
     // create pointer to the shell variables Linked list
     struct SNode *ptr = Sfirst;
     // loop over all tokens & find '$' at the 0th index
@@ -344,7 +344,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             if (env_var != NULL)
             {
                 // free(arg_arr[pos]);
-                //arg_arr[pos] = strdup(env_var);
+                // arg_arr[pos] = strdup(env_var);
                 arg_arr[pos] = env_var;
                 sub_flag = 1;
             }
@@ -358,9 +358,9 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
                     if (strcmp(ptr->key, arg_arr[pos]) == 0)
                     {
                         // free(arg_arr[pos]);
-                        //arg_arr[pos] = strdup(ptr->value);
+                        // arg_arr[pos] = strdup(ptr->value);
                         arg_arr[pos] = ptr->value;
-                        sub_flag=1;
+                        sub_flag = 1;
                         break;
                     }
                     ptr = ptr->next;
@@ -370,7 +370,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
     }
 
     // if word not found then ptr would reach the end of shell variables linked list
-    if (sub_flag==1)
+    if (sub_flag == 1)
     {
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
         strcpy(modified, arg_arr[0]);
@@ -380,7 +380,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, arg_arr[i]);
         }
         // release the strdup of the found variable value
-        //free(arg_arr[pos]);
+        // free(arg_arr[pos]);
         return modified;
     }
     else
@@ -391,14 +391,19 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
 }
 
 // ################### handle redirection ######################
-int redirection(char **arg_arr, int arg_cnt)
+int redirection(int caller, char **arg_arr, int arg_cnt)
 {
     // parameters : space seperated array of tokens, number of tokens
+    // caller = 1 -> called from child
+    // caller = 0 -> called from parent
     // return : 1=redirection successful
     //          0=redirection unsuccessful, no redirection symbol
-    //          2=redirection unsuccessful, [n] is not a number
+    //          2=redirection unsuccessful, [n] is not a number / open() failed
 
     // case : redirection token is always the last one on the command line
+
+    // printf("entered redirection\n");
+
     char *temp = strdup(arg_arr[arg_cnt - 1]);
 
     // position of the 1st redirection symbol
@@ -424,6 +429,8 @@ int redirection(char **arg_arr, int arg_cnt)
             if (!(temp[i] >= '0' && temp[i] < '9'))
             {
                 return_code = -1;
+                free(temp);
+                temp = NULL;
                 return 2;
             }
             num_strg[i] = temp[i];
@@ -431,6 +438,8 @@ int redirection(char **arg_arr, int arg_cnt)
         num_strg[pos] = '\0';
         n = atoi(num_strg);
     }
+
+    // printf("Number converted\n");
 
     // file descriptor of new file
     int file_desc = -1;
@@ -447,7 +456,9 @@ int redirection(char **arg_arr, int arg_cnt)
         if (temp[pos] == '<')
         {
             temp2 = temp + pos + 1;
-            file_desc = open(temp2, O_CREAT | O_RDONLY, 0666);
+            // file_desc = open(temp2, O_CREAT | O_RDONLY, 0666);
+            file_desc = open(temp2, O_RDONLY, 0666);
+            // if the file doesn't exist then should return -1
             if (pos == 0)
             {
                 fd = STDIN_FILENO;
@@ -455,6 +466,11 @@ int redirection(char **arg_arr, int arg_cnt)
             else if (pos != 0)
             {
                 fd = n;
+            }
+            //printf("file_desc=%d\n", file_desc);
+            if(file_desc == -1)
+            {
+                return 2;
             }
             dup2(file_desc, fd);
         }
@@ -471,12 +487,17 @@ int redirection(char **arg_arr, int arg_cnt)
                 temp2 = temp + 2;
                 file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0666);
             }
+            if(file_desc == -1)
+            {
+                return 2;
+            }
             dup2(file_desc, STDOUT_FILENO);
             dup2(file_desc, STDERR_FILENO);
         }
 
         else if (temp[pos] == '>')
         {
+            // printf("entered > case \n");
             if (pos == 0)
             {
                 if (temp[pos] == '>' && temp[pos + 1] == '>')
@@ -488,8 +509,10 @@ int redirection(char **arg_arr, int arg_cnt)
                 {
                     temp2 = temp + 1;
                     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0666);
+                    // printf("file descriptor created\n");
                 }
                 fd = STDOUT_FILENO;
+                // printf("fd set\n");
             }
             else if (pos != 0)
             {
@@ -505,14 +528,27 @@ int redirection(char **arg_arr, int arg_cnt)
                 }
                 fd = n;
             }
+            if(file_desc == -1)
+            {
+                return 2;
+            }
+            // printf("before dup2\n");
             dup2(file_desc, fd);
+            // printf("file descriptor changed\n");
         }
+
+        // printf("redirection done, now freeing remaining\n");
         // free the copy of last token
         free(temp);
         temp = NULL;
+        // printf("temp freed in redirection\n");
         // set the file name to NULL
-        free(arg_arr[arg_cnt - 1]);
-        arg_arr[arg_cnt - 1] = NULL;
+
+        if (caller == 1)
+        {
+            free(arg_arr[arg_cnt - 1]);
+            arg_arr[arg_cnt - 1] = NULL;
+        }
         close(file_desc);
         return 1;
     }
@@ -569,7 +605,7 @@ void builtin_cd(char *arg_arr)
     else
     {
         // chdir unsuccessful
-        //fprintf(stderr, "chdir error\n");
+        // fprintf(stderr, "chdir error\n");
         return_code = -1;
     }
 }
@@ -705,6 +741,7 @@ void builtin_export(char **arg_arr)
     //     return;
     // }
     // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
+
     if (cnt != 2)
     {
         env_var[1] = " ";
@@ -756,6 +793,39 @@ void solve(char **arg_arr, int arg_cnt)
     {
         // check if it takes only one argument
         // printf("entered cd condition\n");
+
+        // handle redirection
+        // eg. cd [path] >
+        if (arg_cnt == 3)
+        {
+            int saved_stdin = dup(0);
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            // printf("3 tokens detected in cd\n");
+            if (redirection(0, arg_arr, arg_cnt) == 1)
+            {
+                // successful redirection
+                // printf("successful redirection in cn");
+                char *token = strdup(arg_arr[1]);
+                builtin_cd(token);
+                return_code = 0;
+                free(token);
+                token = NULL;
+                dup2(saved_stdin, 0);
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
+            }
+            else
+            {
+                // redirection unsuccessful
+                return_code = -1;
+            }
+            close(saved_stderr);
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+
+        // else
         if (arg_cnt == 2)
         {
             // printf("entered if cnt=2 condition\n");
@@ -775,31 +845,59 @@ void solve(char **arg_arr, int arg_cnt)
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
-        if (arg_cnt == 2)
+        // Having a dollar sign on the left side is an error, e.g. local $a=b
+        if (arg_arr[1][0] == '$')
         {
-            // Having a dollar sign on the left side is an error, e.g. local $a=b
-            if (arg_arr[1][0] == '$')
-            {
-                return_code = -1;
-                return;
-            }
+            return_code = -1;
+            return;
+        }
 
-            // search for an "=" sign
-            int i;
-            for (i = 0; arg_arr[1][i] != '\0'; i++)
+        // search for an "=" sign
+        int i;
+        for (i = 0; arg_arr[1][i] != '\0'; i++)
+        {
+            if (arg_arr[1][i] == '=')
+                break;
+        }
+        if (arg_arr[1][i] == '\0')
+        {
+            // No = sign encountered
+            return_code = -1;
+            return;
+        }
+
+        if (arg_cnt == 3)
+        {
+            int saved_stdin = dup(0);
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            // printf("3 tokens detected in cd\n");
+            if (redirection(0, arg_arr, arg_cnt) == 1)
             {
-                if (arg_arr[1][i] == '=')
-                    break;
-            }
-            if (arg_arr[1][i] == '\0')
-            {
-                // No = sign encountered
-                return_code = -1;
+                // successful redirection
+                // printf("successful redirection in cn");
+
+                builtin_export(arg_arr);
+                return_code = 0;
+
+                dup2(saved_stdin, 0);
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
             }
             else
             {
-                builtin_export(arg_arr);
+                // redirection unsuccessful
+                return_code = -1;
             }
+            close(saved_stderr);
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+
+        else if (arg_cnt == 2)
+        {
+
+            builtin_export(arg_arr);
         }
         else
         {
@@ -810,34 +908,57 @@ void solve(char **arg_arr, int arg_cnt)
     // local built-in
     else if (strcmp(arg_arr[0], "local") == 0)
     {
-        if (arg_cnt == 2)
+        // Having a dollar sign on the left side is an error, e.g. local $a=b
+        if (arg_arr[1][0] == '$')
         {
-            // Having a dollar sign on the left side is an error, e.g. local $a=b
-            if (arg_arr[1][0] == '$')
-            {
-                return_code = -1;
-                return;
-            }
+            return_code = -1;
+            return;
+        }
 
-            // search for an "=" sign
-            int i;
-            for (i = 0; arg_arr[1][i] != '\0'; i++)
+        // search for an "=" sign
+        int i;
+        for (i = 0; arg_arr[1][i] != '\0'; i++)
+        {
+            if (arg_arr[1][i] == '=')
+                break;
+        }
+        if (arg_arr[1][i] == '\0')
+        {
+            // No = sign encountered
+            return_code = -1;
+            return;
+        }
+
+        if (arg_cnt == 3)
+        {
+            int saved_stdin = dup(0);
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            if (redirection(0, arg_arr, arg_cnt) == 1)
             {
-                if (arg_arr[1][i] == '=')
-                    break;
-            }
-            if (arg_arr[1][i] == '\0')
-            {
-                // No = sign encountered
-                return_code = -1;
+                // successful redirection
+                builtin_local(arg_arr[1], &shellvars_len);
+                return_code = 0;
+                dup2(saved_stdin, 0);
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
             }
             else
             {
-                // compare that the variable is not already present
-                // if yes : update variable
-                // if no : create new variable & store new value
-                builtin_local(arg_arr[1], &shellvars_len);
+                // redirection unsuccessful
+                return_code = -1;
             }
+            close(saved_stderr);
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+        if (arg_cnt == 2)
+        {
+
+            // compare that the variable is not already present
+            // if yes : update variable
+            // if no : create new variable & store new value
+            builtin_local(arg_arr[1], &shellvars_len);
         }
         else
         {
@@ -857,7 +978,7 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt) == 1)
+            if (redirection(0, arg_arr, arg_cnt) == 1)
             {
                 // successful redirection
                 builtin_vars();
@@ -891,7 +1012,7 @@ void solve(char **arg_arr, int arg_cnt)
     else if (strcmp(arg_arr[0], "history") == 0)
     {
         // printf("Entered history condition\n");
-        if (arg_cnt == 3 && !strcmp(arg_arr[1], "set"))
+        if (arg_cnt >= 3 && !strcmp(arg_arr[1], "set"))
         {
             // works only when "history set [n]"
 
@@ -905,14 +1026,41 @@ void solve(char **arg_arr, int arg_cnt)
                 }
             }
 
-            change_history_size(arg_arr[2]);
+            if (arg_cnt == 3)
+            {
+                change_history_size(arg_arr[2]);
+            }
+            else if (arg_cnt == 4)
+            {
+                int saved_stdin = dup(0);
+                int saved_stdout = dup(1);
+                int saved_stderr = dup(2);
+                if (redirection(0, arg_arr, arg_cnt) == 1)
+                {
+                    // redirection successfull
+                    change_history_size(arg_arr[2]);
+                    return_code = 0;
+                    dup2(saved_stdin, 0);
+                    dup2(saved_stdout, 1);
+                    dup2(saved_stderr, 2);
+                }
+                else
+                {
+                    // redirection unsuccessfull
+                    return_code = -1;
+                    return;
+                }
+                close(saved_stderr);
+                close(saved_stdout);
+                close(saved_stderr);
+            }
         }
         else if (arg_cnt == 2)
         {
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt) == 1)
+            if (redirection(0, arg_arr, arg_cnt) == 1)
             {
                 // redirection successfull
                 builtin_history();
@@ -951,7 +1099,7 @@ void solve(char **arg_arr, int arg_cnt)
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
-            if (redirection(arg_arr, arg_cnt) == 1)
+            if (redirection(0, arg_arr, arg_cnt) == 1)
             {
                 // redirection successful
                 builtin_ls();
@@ -1006,7 +1154,7 @@ void solve(char **arg_arr, int arg_cnt)
                 myargs[i] = strdup(arg_arr[i]);
             }
             myargs[arg_cnt] = NULL; // marks end of array
-            if (redirection(myargs, arg_cnt) == 2)
+            if (redirection(1, myargs, arg_cnt) == 2)
             {
                 return_code = -1;
             }
@@ -1015,8 +1163,8 @@ void solve(char **arg_arr, int arg_cnt)
                 execv(myargs[0], myargs); // runs word count
             }
 
-            //fprintf(stderr, "No such file or directory\n");
-            // kill the child if the execv failed
+            // fprintf(stderr, "No such file or directory\n");
+            //  kill the child if the execv failed
             exit(-1);
         }
         else
@@ -1041,7 +1189,7 @@ void solve(char **arg_arr, int arg_cnt)
         if (rc < 0)
         {
             // fork failed; exit
-            //fprintf(stderr, "fork failed\n");
+            // fprintf(stderr, "fork failed\n");
             return_code = -1;
             // exit(1);
         }
@@ -1056,7 +1204,7 @@ void solve(char **arg_arr, int arg_cnt)
             }
             myargs[arg_cnt] = NULL; // marks end of array
 
-            if (redirection(myargs, arg_cnt) == 2)
+            if (redirection(1, myargs, arg_cnt) == 2)
             {
                 // don't exec if redirection has been called erroneously
                 return_code = -1;

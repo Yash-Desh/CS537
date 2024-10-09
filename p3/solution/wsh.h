@@ -13,7 +13,7 @@ int mysort(const struct dirent **a, const struct dirent **b);
 
 int arg_parse(char *str, char **arg_arr, char *delims);
 char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str);
-int redirection(char **arg_arr, int arg_cnt);
+int redirection(int caller, char **arg_arr, int arg_cnt);
 
 void builtin_ls();
 void builtin_cd(char *arg_arr);

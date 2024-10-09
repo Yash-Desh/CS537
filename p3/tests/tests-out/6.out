@@ -1,10 +1,11 @@
 Makefile
 Nnum
 Nnum.c
+batchscript.wsh
 input.txt
-out.txt
 output.txt
 script.wsh
+t14.txt
 test
 test.c
 testfolder

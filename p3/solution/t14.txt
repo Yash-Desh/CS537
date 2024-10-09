@@ -1,0 +1,4 @@
+local a=echo
+local b=hello
+local c=world
+$a $b $c

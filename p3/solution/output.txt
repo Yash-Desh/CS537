@@ -1,1 +1,1 @@
-hello
+hello >output.txt
