@@ -22,7 +22,10 @@ struct SNode
     char *value;
     struct SNode *next;
 };
+// head of the shell variables linked list 
 struct SNode *Sfirst = NULL;
+
+// length of the shell variables linked list
 int shellvars_len = 0;
 
 // Linked List for history
@@ -31,7 +34,13 @@ struct HNode
     char *command;
     struct HNode *next;
 };
+// head of the history linked list
 struct HNode *Hfirst = NULL;
+
+// variable for history length
+int Hcnt = 0; 
+// user-defined size of history, default value =5
+int Hsize = 5;
 
 // #################################  Free Heap Memory  ######################################
 void free_memory()
@@ -59,30 +68,29 @@ void free_memory()
     // printf("freed memory\n");
 }
 
-void free_input_tokens(char **arg_arr, int arg_cnt)
-{
-    // free input tokens
-    for (int i = 0; i < arg_cnt; i++)
-    {
-        free(arg_arr[i]);
-        arg_arr[i] = NULL;
-    }
-}
+// void free_input_tokens(char **arg_arr, int arg_cnt)
+// {
+//     // free input tokens
+//     for (int i = 0; i < arg_cnt; i++)
+//     {
+//         free(arg_arr[i]);
+//         arg_arr[i] = NULL;
+//     }
+// }
 
 // ##################################### History ##############################################
 
-void record_input(char *dest, char *src)
-{
-    int i = 0;
-    for (; src[i] != '\0'; i++)
-    {
-        dest[i] = src[i];
-    }
-    dest[i] = '\0';
-}
+// void record_input(char *dest, char *src)
+// {
+//     int i = 0;
+//     for (; src[i] != '\0'; i++)
+//     {
+//         dest[i] = src[i];
+//     }
+//     dest[i] = '\0';
+// }
 
-int Hcnt = 0; // variable for history length
-int Hsize = 5;
+
 
 // prune history is called twice
 // flag=0 => from function change_history_size()
@@ -90,6 +98,8 @@ int Hsize = 5;
 
 void prune_history(int history_size, int history_cnt, int func_flag)
 {
+    // func_flag = 0 : history set [n]
+    // func_flag = 1 : history size full
     // Corner case : history size = 1, history count = 1, prune_history() called from record_history()
     if (history_size == 1 && history_cnt == 1 && func_flag == 1)
     {
@@ -104,14 +114,16 @@ void prune_history(int history_size, int history_cnt, int func_flag)
     // if history has 5 elements, make 3 jumps to reach 4th element
     int jumps = 0;
 
-    // prune called from "history set <n>" command
+    // Determine the number of jumps in the linked list based on calling condition
     if (func_flag == 0)
     {
+        // prune called from "history set <n>" command
         jumps = history_size - 1;
     }
-    // history size full
+    
     else
     {
+        // history size full
         jumps = history_size - 2;
     }
 
@@ -226,8 +238,8 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
             }
             char *str = strdup(ptr->command);
             *flag = 1;
-            // free(str2);
-            // printf("history replace\n");
+            
+            // printf("history replaced\n");
             return str;
         }
         else
@@ -253,39 +265,39 @@ int mysort(const struct dirent **a, const struct dirent **b)
 
 // ######################################## Parsers ##############################################
 
-int cnt_tokens(char *str)
-{
-    int cnt = -1;
-    if (str[0] == ' ')
-    {
-        cnt = 0;
-    }
-    else
-    {
-        cnt = 1;
-    }
-    int character_flag = 0;
-    for (int i = 0; str[i] != '\0'; i++)
-    {
-        if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
-        {
-            character_flag = 1;
-        }
+// int cnt_tokens(char *str)
+// {
+//     int cnt = -1;
+//     if (str[0] == ' ')
+//     {
+//         cnt = 0;
+//     }
+//     else
+//     {
+//         cnt = 1;
+//     }
+    // int character_flag = 0;
+    // for (int i = 0; str[i] != '\0'; i++)
+    // {
+    //     if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
+    //     {
+    //         character_flag = 1;
+    //     }
 
-        if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
-        {
-            cnt++;
-        }
-    }
-    if (character_flag)
-    {
-        return cnt;
-    }
-    else
-    {
-        return 0;
-    }
-}
+    //     if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
+    //     {
+    //         cnt++;
+    //     }
+    // }
+    // if (character_flag)
+    // {
+    //     return cnt;
+    // }
+    // else
+//     {
+//         return 0;
+//     }
+// }
 
 int arg_parse(char *str, char **arg_arr, char *delims)
 {
@@ -321,8 +333,10 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 }
 
 // ################################### Variable Substitution ##################################
-char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
+char *variable_sub(char **arg_arr, int arg_cnt, char *str)
 {
+    // pos = position of the token which contains '$'
+    int pos =-1;
     // flag to check if variable substitution has been done on the tokens
     int sub_flag = 0;
     // create pointer to the shell variables Linked list
@@ -343,8 +357,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             env_var = getenv(arg_arr[pos]);
             if (env_var != NULL)
             {
-                // free(arg_arr[pos]);
-                // arg_arr[pos] = strdup(env_var);
+                // found in env variables
                 arg_arr[pos] = env_var;
                 sub_flag = 1;
             }
@@ -357,8 +370,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
                 {
                     if (strcmp(ptr->key, arg_arr[pos]) == 0)
                     {
-                        // free(arg_arr[pos]);
-                        // arg_arr[pos] = strdup(ptr->value);
+                        // found in shell variables
                         arg_arr[pos] = ptr->value;
                         sub_flag = 1;
                         break;
@@ -369,9 +381,10 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
         }
     }
 
-    // if word not found then ptr would reach the end of shell variables linked list
+    // if word NOT found then sub_flag=0
     if (sub_flag == 1)
     {
+        // create a new string & copy all the tokens with space delimiter
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
         strcpy(modified, arg_arr[0]);
         for (int i = 1; i < arg_cnt; i++)
@@ -379,8 +392,7 @@ char *variable_sub(int pos, char **arg_arr, int arg_cnt, char *str)
             strcat(modified, " ");
             strcat(modified, arg_arr[i]);
         }
-        // release the strdup of the found variable value
-        // free(arg_arr[pos]);
+        
         return modified;
     }
     else
@@ -406,7 +418,7 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
 
     char *temp = strdup(arg_arr[arg_cnt - 1]);
 
-    // position of the 1st redirection symbol
+    // position of the 1st & only redirection symbol
     int pos = -1;
     for (int i = 0; temp[i] != '\0'; i++)
     {
@@ -417,9 +429,10 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
         }
     }
 
+    // check if [n]>word, n is an an integer number
     int n = -1;
     char num_strg[1024];
-    // check if [n] is an an integer number
+    
     // copy the number into num_strg
     // get its integer format
     if (pos > 0)
@@ -439,8 +452,6 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
         n = atoi(num_strg);
     }
 
-    // printf("Number converted\n");
-
     // file descriptor of new file
     int file_desc = -1;
     // file descriptor of old file
@@ -449,25 +460,28 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
     // file name pointer
     char *temp2 = NULL;
 
-    // case : redirect stdout
     if (pos != -1)
     {
         // redirection symbol present
         if (temp[pos] == '<')
         {
+            // pointer to file name
             temp2 = temp + pos + 1;
-            // file_desc = open(temp2, O_CREAT | O_RDONLY, 0666);
+            // readonly permissions 
             file_desc = open(temp2, O_RDONLY, 0666);
             // if the file doesn't exist then should return -1
             if (pos == 0)
             {
+                // case : <word
                 fd = STDIN_FILENO;
             }
             else if (pos != 0)
             {
+                // case : [n]<word
                 fd = n;
             }
-            // printf("file_desc=%d\n", file_desc);
+            // no file found & new one cannot be created then 
+            // return value of open = -1, file opening failed
             if (file_desc == -1)
             {
                 free(temp);
@@ -481,16 +495,19 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
         {
             if (temp[pos + 1] == '>' && temp[pos + 2] == '>')
             {
+                // case : &>>word
                 temp2 = temp + 3;
                 file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
             }
             else if (temp[pos + 1] == '>')
             {
+                // case : &>word
                 temp2 = temp + 2;
                 file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0666);
             }
             if (file_desc == -1)
             {
+                // failed to open file
                 free(temp);
                 temp = NULL;
                 return 2;
@@ -506,11 +523,13 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             {
                 if (temp[pos] == '>' && temp[pos + 1] == '>')
                 {
+                    // case : >>word
                     temp2 = temp + 2;
                     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
                 }
                 else if (temp[pos] == '>')
                 {
+                    // case : >word
                     temp2 = temp + 1;
                     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0666);
                     // printf("file descriptor created\n");
@@ -522,11 +541,13 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             {
                 if (temp[pos] == '>' && temp[pos + 1] == '>')
                 {
+                    // case : [n]>>word
                     temp2 = temp + pos + 2;
                     file_desc = open(temp2, O_CREAT | O_APPEND | O_WRONLY, 0666);
                 }
                 else if (temp[pos] == '>')
                 {
+                    // case : [n]>word
                     temp2 = temp + pos + 1;
                     file_desc = open(temp2, O_CREAT | O_WRONLY | O_TRUNC, 0666);
                 }
@@ -534,16 +555,14 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             }
             if (file_desc == -1)
             {
+                // file opening failed
                 free(temp);
                 temp = NULL;
                 return 2;
             }
-            // printf("before dup2\n");
             dup2(file_desc, fd);
-            // printf("file descriptor changed\n");
         }
 
-        // printf("redirection done, now freeing remaining\n");
         // free the copy of last token
         free(temp);
         temp = NULL;
@@ -552,10 +571,12 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
 
         if (caller == 1)
         {
+            // if redirection takes place in child
             free(arg_arr[arg_cnt - 1]);
             arg_arr[arg_cnt - 1] = NULL;
         }
         close(file_desc);
+        // successful redirection
         return 1;
     }
     else
@@ -572,13 +593,15 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
 void builtin_ls()
 {
     int no_of_files;
-    // char** fileList;
+    
     struct dirent **fileListTemp;
+    // path as '.' is current working directory 
     char *path = ".";
     no_of_files = scandir(path, &fileListTemp, NULL, mysort);
     // printf("no of files : %d\n", no_of_files);
     for (int i = 0; i < no_of_files; i++)
     {
+        // ignore files starting with '.'
         if (fileListTemp[i]->d_name[0] == '.')
             continue;
         printf("%s\n", fileListTemp[i]->d_name);
@@ -636,13 +659,14 @@ void builtin_local(char *arg, int *shellvars_len)
     // check for variable substitution
     if (temp[1][0] == '$')
     {
-        // tokenize for :
+        // substitute the $word if $ found
         // printf("$ encountered in local command\n");
-        char *ret_token = variable_sub(1, temp, cnt, temp[0]);
+        char *ret_token = variable_sub(temp, cnt, temp[0]);
         free(ret_token);
     }
 
     // if shell variable is already present
+    // then replace the existing value with the new value
     while (ptr != NULL)
     {
 
@@ -677,19 +701,19 @@ void builtin_local(char *arg, int *shellvars_len)
 
     if (Sfirst == NULL)
     {
-        // printf("inside if condition\n");
+        // Shell variables linked list empty
         Sfirst = t;
         ptr = t;
     }
     else
     {
-        //     // struct shell_var *ptr = head;
-        // printf("Inside else condition\n");
+        // shell variables linked list is NOT empty
         while (ptr->next != NULL)
         {
             // printf("inside while loop\n");
             ptr = ptr->next;
         }
+        // assign the new token
         ptr->next = t;
     }
     // debug statements : to be removed
@@ -757,7 +781,7 @@ void builtin_export(char **arg_arr)
     {
         // tokenize for :
         // printf("$ encountered in local command\n");
-        char *ret_token = variable_sub(1, env_var, cnt, env_var[0]);
+        char *ret_token = variable_sub(env_var, cnt, env_var[0]);
         free(ret_token);
     }
     setenv(env_var[0], env_var[1], 1);
@@ -1217,7 +1241,7 @@ void solve(char **arg_arr, int arg_cnt)
         {
             // parent goes down this path (original process)
             // int wc =
-            wait(&return_code);
+            waitpid(rc, &return_code, 0);
             if (return_code > 0)
                 return_code = -1;
             // printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
@@ -1298,7 +1322,7 @@ void solve(char **arg_arr, int arg_cnt)
             // parent goes down this path (original process)
             // int wc = wait(NULL);
             // printf("before wait writes to return_code %d\n", return_code);
-            wait(&return_code);
+            waitpid(rc, &return_code, 0);
             // printf("After wait writes, the return_code is %d\n", return_code);
             //  printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int)getpid());
             if (return_code > 0)
@@ -1325,7 +1349,7 @@ int main(int argc, char *argv[])
 {
     // entered process wsh
 
-    // Your initial shell PATH environment variable should contain one directory: /bin
+    // initial shell PATH environment variable contains one directory: /bin
     setenv("PATH", "/bin", 1);
 
     // declarations for the getline() function
@@ -1344,13 +1368,12 @@ int main(int argc, char *argv[])
             return -1;
         }
         // printf("Entered Batch mode\n");
-        // while ((len = getline(&input, &size, file_ptr)) != -1)
+        
         while (1)
         {
 
             // ######################## Take user input ###########################
-            // printf("wsh> ");
-            // fflush(stdout);
+            
             if ((len = getline(&input, &size, file_ptr)) == -1)
             {
                 free(input);
@@ -1358,7 +1381,7 @@ int main(int argc, char *argv[])
                 free_memory();
                 break;
             }
-            // printf("\n");
+            
             // remove new-line character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
             {
@@ -1369,19 +1392,23 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
-            // printf("No of tokens = %d\n", cnt_tokens(str1));
+            
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
+            {
+                free(str1);
                 continue;
+            }
 
             // ####################### Handle comments ###############################
             // char *comment_token = arg_arr1[0];
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as batch comment\n");
+                free(str1);
                 continue;
             }
 
@@ -1409,53 +1436,24 @@ int main(int argc, char *argv[])
             }
             char *sub_input = NULL;
 
-            // loop to find a '$' symbol
+            // find & replace if '$' found else return original string
             if (used_history == 0)
             {
-                sub_input = variable_sub(1, arg_arr1, arg_cnt, actual_input);
-                // for (int i = 0; i < arg_cnt; i++)
-                // {
-                //     // substitute variable for every '$' found
-
-                //     if (arg_arr1[i][0] == '$')
-                //     {
-                //         // in case of multiple '$', release previously allocated memory
-                //         if (sub_input != NULL)
-                //         {
-                //             free(sub_input);
-                //             sub_input = NULL;
-                //         }
-                //         // input untouched in this function
-                //         sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
-                //     }
-                // }
+                sub_input = variable_sub(arg_arr1, arg_cnt, actual_input);
+                
             }
             else if (used_history == 1)
             {
-                sub_input = variable_sub(1, arg_arr2, arg_cnt, actual_input);
-                // for (int i = 0; i < arg_cnt; i++)
-                // {
-                //     // substitute variable for every '$' found
-
-                //     if (arg_arr2[i][0] == '$')
-                //     {
-                //         // in case of multiple '$', release previously allocated memory
-                //         if (sub_input != NULL)
-                //         {
-                //             free(sub_input);
-                //             sub_input = NULL;
-                //         }
-                //         // input untouched in this function
-                //         sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
-                //     }
-                // }
+                sub_input = variable_sub(arg_arr2, arg_cnt, actual_input);
             }
+            // No '$' symbol found
+            // redundant check
             if (sub_input == NULL)
             {
                 sub_input = actual_input;
             }
 
-            // I think post this point I no longer use str1
+            // I think post this point I no longer use str1 & str2
             free(str1);
             if (str2 != NULL)
             {
@@ -1489,6 +1487,7 @@ int main(int argc, char *argv[])
         }
         fclose(file_ptr);
     }
+
     else if (argc == 1)
     {
         // printf("Interactive Mode On\n");
@@ -1514,7 +1513,7 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
-            // printf("No of tokens = %d\n", cnt_tokens(str1));
+            
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
@@ -1538,6 +1537,7 @@ int main(int argc, char *argv[])
 
             // ################### handle history ###################
 
+            // variable to store whether command was replaced using history
             int used_history = 0;
             char *actual_input = history_replace(input, arg_arr1, arg_cnt, &used_history);
 
@@ -1550,64 +1550,31 @@ int main(int argc, char *argv[])
 
             // ################### handle variable substitution ######################
 
+            // deep copy of the history-replaced user-input
             char *str2 = NULL;
             char *arg_arr2[MAXARGS] = {NULL};
             if (used_history == 1)
             {
+                // tokenize the history-replaced user-input
                 str2 = strdup(actual_input);
                 arg_cnt = arg_parse(str2, arg_arr2, " ");
                 // printf("used history & new command tokenized\n");
             }
-            // printf("new block ran\n");
 
+            // pointer to store variable-substituted user-input
             char *sub_input = NULL;
 
-            // loop to find a '$' symbol
+            // find & replace if '$' found else return original string
             if (used_history == 0)
             {
-                sub_input = variable_sub(1, arg_arr1, arg_cnt, actual_input);
-                // char *copy_input = NULL;
-                // for (int i = 0; i < arg_cnt; i++)
-                // {
-                //     // substitute variable for every '$' found
-
-                //     if (arg_arr1[i][0] == '$')
-                //     {
-                //         // in case of multiple '$', release previously allocated memory
-                //         if (sub_input != NULL)
-                //         {
-                //             copy_input = strdup(sub_input);
-                //             free(sub_input);
-                //             sub_input = NULL;
-                //             sub_input = variable_sub(i, arg_arr1, arg_cnt, copy_input);
-                //         }
-                //         // input untouched in this function
-                //         else
-                //             sub_input = variable_sub(i, arg_arr1, arg_cnt, actual_input);
-                //     }
-                // }
+                sub_input = variable_sub(arg_arr1, arg_cnt, actual_input);
             }
             else if (used_history == 1)
             {
-                sub_input = variable_sub(1, arg_arr2, arg_cnt, actual_input);
-                // for (int i = 0; i < arg_cnt; i++)
-                // {
-                //     // substitute variable for every '$' found
-
-                //     if (arg_arr2[i][0] == '$')
-                //     {
-                //         // in case of multiple '$', release previously allocated memory
-                //         if (sub_input != NULL)
-                //         {
-                //             free(sub_input);
-                //             sub_input = NULL;
-                //         }
-                //         // input untouched in this function
-                //         sub_input = variable_sub(i, arg_arr2, arg_cnt, actual_input);
-                //     }
-                // }
+                sub_input = variable_sub(arg_arr2, arg_cnt, actual_input);
             }
             // No '$' symbol found
+            // redundant check
             if (sub_input == NULL)
             {
                 sub_input = actual_input;
@@ -1615,7 +1582,7 @@ int main(int argc, char *argv[])
 
             // printf("sub_input = %s\n", sub_input);
 
-            // I think post this point I no longer use str1
+            // I think post this point I no longer use str1 & str2
             free(str1);
             if (str2 != NULL)
             {
@@ -1632,7 +1599,7 @@ int main(int argc, char *argv[])
             // ################################ Release Memory ####################################
 
             // release input, actual_input, sub_input
-            // printf("Nothing freed yet\n");
+            // if conditions to avoid multiple frees of the same pointer
             if (input != NULL && (strcmp(input, sub_input) != 0) && (strcmp(input, actual_input) != 0))
             {
                 free(input);
@@ -1658,9 +1625,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // free(input);
+    // free the linked lists in case the user enters ctrl + d
+    // redundant check
     input = NULL;
     free_memory();
-    // printf("Before returning main %d\n", return_code);
+    
     return return_code;
 }
