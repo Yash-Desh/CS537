@@ -22,7 +22,7 @@ struct SNode
     char *value;
     struct SNode *next;
 };
-// head of the shell variables linked list 
+// head of the shell variables linked list
 struct SNode *Sfirst = NULL;
 
 // length of the shell variables linked list
@@ -38,9 +38,18 @@ struct HNode
 struct HNode *Hfirst = NULL;
 
 // variable for history length
-int Hcnt = 0; 
+int Hcnt = 0;
 // user-defined size of history, default value =5
 int Hsize = 5;
+
+// void *Malloc(size_t size) {
+//     void *ptr = malloc(size);
+//     if (!ptr) {
+//         perror("malloc");
+//         exit(-1);
+//     }
+//     return ptr;
+// }
 
 // #################################  Free Heap Memory  ######################################
 void free_memory()
@@ -90,8 +99,6 @@ void free_memory()
 //     dest[i] = '\0';
 // }
 
-
-
 // prune history is called twice
 // flag=0 => from function change_history_size()
 // flag=1 => from function record_history()
@@ -120,7 +127,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
         // prune called from "history set <n>" command
         jumps = history_size - 1;
     }
-    
+
     else
     {
         // history size full
@@ -165,9 +172,28 @@ void prune_history(int history_size, int history_cnt, int func_flag)
 void change_history_size(char *n)
 {
     int newsize = atoi(n);
-    if (newsize <= 0)
+    if (newsize < 0)
     {
         return_code = -1;
+        return;
+    }
+    else if (newsize == 0)
+    {
+        // free the linked list
+        struct HNode *hprev = NULL;
+        while (Hfirst != NULL)
+        {
+            hprev = Hfirst;
+            Hfirst = Hfirst->next;
+            free(hprev->command);
+            free(hprev);
+        }
+        hprev = NULL;
+        // set the head to NULL;
+        Hfirst = NULL;
+        Hsize = newsize;
+        Hcnt =0;
+        return_code = 0;
         return;
     }
     Hsize = newsize;
@@ -220,6 +246,13 @@ void record_history(char *arg, char *firstarg)
 
 char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
 {
+    // when Hsize=0, no history replacement possible
+    if (Hsize == 0)
+    {
+        *flag = 0;
+        return str2;
+    }
+
     // compare if 1st term = "history"
     // checking for format "history [n]"
     if (arg_cnt == 2 && strcmp(input_tokens[0], "history") == 0)
@@ -238,13 +271,15 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
             }
             char *str = strdup(ptr->command);
             *flag = 1;
-            
+
             // printf("history replaced\n");
             return str;
         }
         else
         {
             // if command_no is not valid
+            // No history replacement possible
+            *flag = 0;
             return str2;
         }
     }
@@ -252,6 +287,8 @@ char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag)
     else
     {
         // if command doesn't start with "history"
+        // No history replacement possible
+        *flag = 0;
         return str2;
     }
 }
@@ -276,24 +313,24 @@ int mysort(const struct dirent **a, const struct dirent **b)
 //     {
 //         cnt = 1;
 //     }
-    // int character_flag = 0;
-    // for (int i = 0; str[i] != '\0'; i++)
-    // {
-    //     if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
-    //     {
-    //         character_flag = 1;
-    //     }
+// int character_flag = 0;
+// for (int i = 0; str[i] != '\0'; i++)
+// {
+//     if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
+//     {
+//         character_flag = 1;
+//     }
 
-    //     if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
-    //     {
-    //         cnt++;
-    //     }
-    // }
-    // if (character_flag)
-    // {
-    //     return cnt;
-    // }
-    // else
+//     if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
+//     {
+//         cnt++;
+//     }
+// }
+// if (character_flag)
+// {
+//     return cnt;
+// }
+// else
 //     {
 //         return 0;
 //     }
@@ -336,7 +373,7 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 char *variable_sub(char **arg_arr, int arg_cnt, char *str)
 {
     // pos = position of the token which contains '$'
-    int pos =-1;
+    int pos = -1;
     // flag to check if variable substitution has been done on the tokens
     int sub_flag = 0;
     // create pointer to the shell variables Linked list
@@ -392,7 +429,7 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
             strcat(modified, " ");
             strcat(modified, arg_arr[i]);
         }
-        
+
         return modified;
     }
     else
@@ -432,7 +469,7 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
     // check if [n]>word, n is an an integer number
     int n = -1;
     char num_strg[1024];
-    
+
     // copy the number into num_strg
     // get its integer format
     if (pos > 0)
@@ -467,7 +504,7 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
         {
             // pointer to file name
             temp2 = temp + pos + 1;
-            // readonly permissions 
+            // readonly permissions
             file_desc = open(temp2, O_RDONLY, 0666);
             // if the file doesn't exist then should return -1
             if (pos == 0)
@@ -480,7 +517,7 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
                 // case : [n]<word
                 fd = n;
             }
-            // no file found & new one cannot be created then 
+            // no file found & new one cannot be created then
             // return value of open = -1, file opening failed
             if (file_desc == -1)
             {
@@ -593,9 +630,9 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
 void builtin_ls()
 {
     int no_of_files;
-    
+
     struct dirent **fileListTemp;
-    // path as '.' is current working directory 
+    // path as '.' is current working directory
     char *path = ".";
     no_of_files = scandir(path, &fileListTemp, NULL, mysort);
     // printf("no of files : %d\n", no_of_files);
@@ -975,10 +1012,10 @@ void solve(char **arg_arr, int arg_cnt)
         int i;
         for (i = 0; arg_arr[1][i] != '\0'; i++)
         {
-            // handle 'local =b' case  
+            // handle 'local =b' case
             if (arg_arr[1][i] == '=')
             {
-                if(i==0)
+                if (i == 0)
                 {
                     // = found at 0th position
                     return_code = -1;
@@ -990,7 +1027,6 @@ void solve(char **arg_arr, int arg_cnt)
                     break;
                 }
             }
-                
         }
         if (arg_arr[1][i] == '\0')
         {
@@ -1368,12 +1404,12 @@ int main(int argc, char *argv[])
             return -1;
         }
         // printf("Entered Batch mode\n");
-        
+
         while (1)
         {
 
             // ######################## Take user input ###########################
-            
+
             if ((len = getline(&input, &size, file_ptr)) == -1)
             {
                 free(input);
@@ -1381,7 +1417,7 @@ int main(int argc, char *argv[])
                 free_memory();
                 break;
             }
-            
+
             // remove new-line character that getline() reads by default
             if (input[strlen(input) - 1] == '\n')
             {
@@ -1392,7 +1428,7 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
-            
+
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
@@ -1419,7 +1455,7 @@ int main(int argc, char *argv[])
             char *actual_input = history_replace(input, arg_arr1, arg_cnt, &used_history);
 
             // record history if command is NOT of format "history [n]"
-            if (used_history == 0)
+            if (used_history == 0 && Hsize > 0)
             {
                 record_history(actual_input, arg_arr1[0]);
             }
@@ -1440,7 +1476,6 @@ int main(int argc, char *argv[])
             if (used_history == 0)
             {
                 sub_input = variable_sub(arg_arr1, arg_cnt, actual_input);
-                
             }
             else if (used_history == 1)
             {
@@ -1513,7 +1548,7 @@ int main(int argc, char *argv[])
             // ################## parse the input for spaces #######################
             // make a deep copy of the user input
             char *str1 = strdup(input);
-            
+
             char *arg_arr1[MAXARGS] = {NULL};
             int arg_cnt = arg_parse(str1, arg_arr1, " ");
 
@@ -1542,7 +1577,8 @@ int main(int argc, char *argv[])
             char *actual_input = history_replace(input, arg_arr1, arg_cnt, &used_history);
 
             // record history if command is NOT of format "history [n]"
-            if (used_history == 0)
+            // record history only if Hsize > 0
+            if (used_history == 0 && Hsize > 0)
             {
                 // if command != history [n], only then record history
                 record_history(actual_input, arg_arr1[0]);
@@ -1629,6 +1665,6 @@ int main(int argc, char *argv[])
     // redundant check
     input = NULL;
     free_memory();
-    
+
     return return_code;
 }
