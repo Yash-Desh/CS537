@@ -951,8 +951,22 @@ void solve(char **arg_arr, int arg_cnt)
         int i;
         for (i = 0; arg_arr[1][i] != '\0'; i++)
         {
+            // handle 'local =b' case  
             if (arg_arr[1][i] == '=')
-                break;
+            {
+                if(i==0)
+                {
+                    // = found at 0th position
+                    return_code = -1;
+                    return;
+                }
+                else
+                {
+                    // = found at valid position
+                    break;
+                }
+            }
+                
         }
         if (arg_arr[1][i] == '\0')
         {
