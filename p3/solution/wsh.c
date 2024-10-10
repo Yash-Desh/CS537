@@ -153,7 +153,7 @@ void prune_history(int history_size, int history_cnt, int func_flag)
 void change_history_size(char *n)
 {
     int newsize = atoi(n);
-    if(newsize <= 0)
+    if (newsize <= 0)
     {
         return_code = -1;
         return;
@@ -467,9 +467,11 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             {
                 fd = n;
             }
-            //printf("file_desc=%d\n", file_desc);
-            if(file_desc == -1)
+            // printf("file_desc=%d\n", file_desc);
+            if (file_desc == -1)
             {
+                free(temp);
+                temp = NULL;
                 return 2;
             }
             dup2(file_desc, fd);
@@ -487,8 +489,10 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
                 temp2 = temp + 2;
                 file_desc = open(temp2, O_CREAT | O_TRUNC | O_WRONLY, 0666);
             }
-            if(file_desc == -1)
+            if (file_desc == -1)
             {
+                free(temp);
+                temp = NULL;
                 return 2;
             }
             dup2(file_desc, STDOUT_FILENO);
@@ -528,8 +532,10 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
                 }
                 fd = n;
             }
-            if(file_desc == -1)
+            if (file_desc == -1)
             {
+                free(temp);
+                temp = NULL;
                 return 2;
             }
             // printf("before dup2\n");
@@ -770,6 +776,32 @@ void solve(char **arg_arr, int arg_cnt)
     // exit built-in command
     if ((strcmp(arg_arr[0], "exit") == 0))
     {
+        if (arg_cnt == 2)
+        {
+            int saved_stdin = dup(0);
+            int saved_stdout = dup(1);
+            int saved_stderr = dup(2);
+            if (redirection(0, arg_arr, arg_cnt) == 1)
+            {
+                // successful redirection
+                free_memory();
+                free(arg_arr[0]);
+                exit(return_code);
+                // return_code = 0;
+                dup2(saved_stdin, 0);
+                dup2(saved_stdout, 1);
+                dup2(saved_stderr, 2);
+            }
+            else
+            {
+                // redirection unsuccessful
+                return_code = -1;
+            }
+            close(saved_stderr);
+            close(saved_stdout);
+            close(saved_stderr);
+        }
+
         if ((arg_cnt == 1))
         {
             // It is an error to pass any arguments to exit
