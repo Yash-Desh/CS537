@@ -77,27 +77,7 @@ void free_memory()
     // printf("freed memory\n");
 }
 
-// void free_input_tokens(char **arg_arr, int arg_cnt)
-// {
-//     // free input tokens
-//     for (int i = 0; i < arg_cnt; i++)
-//     {
-//         free(arg_arr[i]);
-//         arg_arr[i] = NULL;
-//     }
-// }
-
 // ##################################### History ##############################################
-
-// void record_input(char *dest, char *src)
-// {
-//     int i = 0;
-//     for (; src[i] != '\0'; i++)
-//     {
-//         dest[i] = src[i];
-//     }
-//     dest[i] = '\0';
-// }
 
 // prune history is called twice
 // flag=0 => from function change_history_size()
@@ -301,40 +281,6 @@ int mysort(const struct dirent **a, const struct dirent **b)
 }
 
 // ######################################## Parsers ##############################################
-
-// int cnt_tokens(char *str)
-// {
-//     int cnt = -1;
-//     if (str[0] == ' ')
-//     {
-//         cnt = 0;
-//     }
-//     else
-//     {
-//         cnt = 1;
-//     }
-// int character_flag = 0;
-// for (int i = 0; str[i] != '\0'; i++)
-// {
-//     if (str[i] != ' ' && str[i] != '\0' && str[i] != '\n')
-//     {
-//         character_flag = 1;
-//     }
-
-//     if (str[i] == ' ' && str[i + 1] != ' ' && str[i + 1] != '\0' && str[i + 1] != '\n')
-//     {
-//         cnt++;
-//     }
-// }
-// if (character_flag)
-// {
-//     return cnt;
-// }
-// else
-//     {
-//         return 0;
-//     }
-// }
 
 int arg_parse(char *str, char **arg_arr, char *delims)
 {
@@ -762,11 +708,6 @@ void builtin_local(char *arg, int *shellvars_len)
 
 void builtin_vars()
 {
-    // printf("entered builtin_vars function\n");
-    // if (Sfirst == NULL)
-    // {
-    //     //fprintf(stderr, "No shell variable\n");
-    // }
     struct SNode *ptr = Sfirst;
     while (ptr != NULL)
     {
@@ -800,15 +741,7 @@ void builtin_export(char **arg_arr)
     char *token = strdup(arg_arr[1]);
     int cnt = arg_parse(token, env_var, "=");
 
-    // handle empty shell variable assignments
-    // if((cnt != 2) && (env_var[0][strlen(env_var[0])-1] != '='))
-    // {
-    //     // Doing just export VAR without definition is not allowed and should produce error.
-    //     return_code = -1;
-    //     return;
-    // }
-    // if ((cnt != 2) && (arg_arr[1][sizeof(env_var[1])-1] == '='))
-
+    // handle empty shell variable assignment eg. "local a="
     if (cnt != 2)
     {
         env_var[1] = " ";
@@ -1364,17 +1297,8 @@ void solve(char **arg_arr, int arg_cnt)
             if (return_code > 0)
                 return_code = -1;
         }
-        // free_input_tokens(path_arg, path_cnt);
     }
-
-    // Crux lies here
-    // free_input_tokens(arg_arr, arg_cnt);
 }
-
-// // Piazza @226
-// // constraints on the input like command length and number of arguments
-// #define MAXLINE 1024
-// #define MAXARGS 128
 
 // #####################################################################################
 // #####################################################################################
