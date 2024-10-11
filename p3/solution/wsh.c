@@ -402,7 +402,7 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     }
     else
     {
-        // $word - word not found in both shell & env variables list
+        // No $ sign encountered
         return str;
     }
 }
