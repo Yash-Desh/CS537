@@ -318,6 +318,9 @@ int arg_parse(char *str, char **arg_arr, char *delims)
 // ################################### Variable Substitution ##################################
 char *variable_sub(char **arg_arr, int arg_cnt, char *str)
 {
+    // when $word, word is not found anywhere
+    char empty_space[] = "";
+
     // pos = position of the token which contains '$'
     int pos = -1;
     // flag to check if variable substitution has been done on the tokens
@@ -329,15 +332,15 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     {
         if (arg_arr[i][0] == '$')
         {
-            // '$' found at token i
+            // printf("$ found at token %d\n", i);
             pos = i;
             // lose the dollar sign
-            arg_arr[pos]++;
+            char *temp = arg_arr[pos]+1;
             // printf("%s\n", arg_arr[pos]);
 
             // search in environment variables
             char *env_var = NULL;
-            env_var = getenv(arg_arr[pos]);
+            env_var = getenv(temp);
             if (env_var != NULL)
             {
                 // found in env variables
@@ -346,12 +349,12 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
             }
 
             // search in shell variables
-            else
+            else if(shellvars_len != 0)
             {
                 ptr = Sfirst;
                 while (ptr != NULL)
                 {
-                    if (strcmp(ptr->key, arg_arr[pos]) == 0)
+                    if (strcmp(ptr->key, temp) == 0)
                     {
                         // found in shell variables
                         arg_arr[pos] = ptr->value;
@@ -361,6 +364,12 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
                     ptr = ptr->next;
                 }
             }
+            else 
+            {
+                sub_flag = 1;
+                // printf("No $variable\n");
+                arg_arr[pos] = empty_space;
+            }
         }
     }
 
@@ -369,13 +378,22 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     {
         // create a new string & copy all the tokens with space delimiter
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
-        strcpy(modified, arg_arr[0]);
+        
+        if(arg_arr[0][0] != '$')
+            strcpy(modified, arg_arr[0]);
+        else
+            strcpy(modified, "");
+
         for (int i = 1; i < arg_cnt; i++)
         {
+            if(arg_arr[i][0] == '$')
+            {
+                continue;
+            }
             strcat(modified, " ");
             strcat(modified, arg_arr[i]);
         }
-
+        // printf("modified string %s\n", modified);
         return modified;
     }
     else
@@ -871,6 +889,12 @@ void solve(char **arg_arr, int arg_cnt)
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
+        if(arg_cnt == 1)
+        {
+            return_code = -1;
+            return;
+        }
+
         // Having a dollar sign on the left side is an error, e.g. local $a=b
         if (arg_arr[1][0] == '$')
         {
@@ -934,6 +958,12 @@ void solve(char **arg_arr, int arg_cnt)
     // local built-in
     else if (strcmp(arg_arr[0], "local") == 0)
     {
+        if(arg_cnt == 1)
+        {
+            return_code =-1;
+            return;
+        }
+
         // Having a dollar sign on the left side is an error, e.g. local $a=b
         if (arg_arr[1][0] == '$')
         {
@@ -1359,6 +1389,7 @@ int main(int argc, char *argv[])
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
             {
+                return_code = 0;
                 free(str1);
                 continue;
             }
@@ -1368,6 +1399,7 @@ int main(int argc, char *argv[])
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as batch comment\n");
+                return_code = 0;
                 free(str1);
                 continue;
             }
@@ -1424,7 +1456,16 @@ int main(int argc, char *argv[])
             // Tokenise the history-replaced variable-substituted input
             char *arg_arr3[MAXARGS] = {NULL};
             arg_cnt = arg_parse(sub_input, arg_arr3, " ");
-            solve(arg_arr3, arg_cnt);
+            // solve(arg_arr3, arg_cnt);
+            if (arg_cnt == 0)
+            {
+                return_code = 0;
+                //continue;
+            }
+            else
+            {
+                solve(arg_arr3, arg_cnt);
+            }
 
             // ################################ Release Memory ####################################
 
@@ -1481,6 +1522,7 @@ int main(int argc, char *argv[])
             // ######################## Handle spaces/newlines in files ######################
             if (arg_cnt == 0)
             {
+                return_code = 0;
                 free(str1);
                 continue;
             }
@@ -1490,6 +1532,7 @@ int main(int argc, char *argv[])
             if (arg_arr1[0][0] == '#')
             {
                 // printf("Treated as interactive comment\n");
+                return_code = 0;
                 free(str1);
                 continue;
             }
@@ -1554,7 +1597,17 @@ int main(int argc, char *argv[])
             // Tokenise the history-replaced variable-substituted input
             char *arg_arr3[MAXARGS] = {NULL};
             arg_cnt = arg_parse(sub_input, arg_arr3, " ");
-            solve(arg_arr3, arg_cnt);
+            if (arg_cnt == 0)
+            {
+                return_code = 0;
+                //continue;
+            }
+            else
+            {
+                solve(arg_arr3, arg_cnt);
+            }
+            
+            
 
             // ################################ Release Memory ####################################
 

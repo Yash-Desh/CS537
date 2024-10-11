@@ -2,11 +2,11 @@
 #define WSH_H
 
 // not used
-void record_input(char *dest, char *src);
+//void record_input(char *dest, char *src);
 
 void prune_history(int history_size, int history_cnt, int func_flag);
 void change_history_size(char *n);
-// void record_history(char *arg, char *firstarg);
+void record_history(char *arg, char *firstarg);
 char *history_replace(char *str2, char **input_tokens, int arg_cnt, int *flag);
 
 int mysort(const struct dirent **a, const struct dirent **b);

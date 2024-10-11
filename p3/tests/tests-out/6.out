@@ -1,6 +1,7 @@
 Makefile
 Nnum
 Nnum.c
+a.txt
 batchscript.wsh
 input.txt
 output.txt
