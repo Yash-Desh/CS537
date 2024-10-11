@@ -172,7 +172,7 @@ void change_history_size(char *n)
         // set the head to NULL;
         Hfirst = NULL;
         Hsize = newsize;
-        Hcnt =0;
+        Hcnt = 0;
         return_code = 0;
         return;
     }
@@ -332,10 +332,10 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     {
         if (arg_arr[i][0] == '$')
         {
-            // printf("$ found at token %d\n", i);
+            //printf("$ found at token %d\n", i);
             pos = i;
             // lose the dollar sign
-            char *temp = arg_arr[pos]+1;
+            char *temp = arg_arr[pos] + 1;
             // printf("%s\n", arg_arr[pos]);
 
             // search in environment variables
@@ -343,33 +343,36 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
             env_var = getenv(temp);
             if (env_var != NULL)
             {
-                // found in env variables
+                //printf("found in env variables\n");
                 arg_arr[pos] = env_var;
                 sub_flag = 1;
             }
 
             // search in shell variables
-            else if(shellvars_len != 0)
+            else
             {
                 ptr = Sfirst;
                 while (ptr != NULL)
                 {
                     if (strcmp(ptr->key, temp) == 0)
                     {
-                        // found in shell variables
+                        //printf("found in shell variables\n");
                         arg_arr[pos] = ptr->value;
                         sub_flag = 1;
                         break;
                     }
                     ptr = ptr->next;
                 }
+
+                // either linked list empty or variable not found in shell variables linked list
+                if (ptr == NULL)
+                {
+                    sub_flag = 1;
+                    //printf("No $variable\n");
+                    arg_arr[pos] = empty_space;
+                }
             }
-            else 
-            {
-                sub_flag = 1;
-                // printf("No $variable\n");
-                arg_arr[pos] = empty_space;
-            }
+            //printf("if-else ladder complete\n");
         }
     }
 
@@ -378,15 +381,16 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     {
         // create a new string & copy all the tokens with space delimiter
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
-        
-        if(arg_arr[0][0] != '$')
+
+        // redundant checks incase variable substitution fails
+        if (arg_arr[0][0] != '$')
             strcpy(modified, arg_arr[0]);
         else
             strcpy(modified, "");
 
         for (int i = 1; i < arg_cnt; i++)
         {
-            if(arg_arr[i][0] == '$')
+            if (arg_arr[i][0] == '$')
             {
                 continue;
             }
@@ -889,7 +893,7 @@ void solve(char **arg_arr, int arg_cnt)
     // export built-in command
     else if (strcmp(arg_arr[0], "export") == 0)
     {
-        if(arg_cnt == 1)
+        if (arg_cnt == 1)
         {
             return_code = -1;
             return;
@@ -958,9 +962,9 @@ void solve(char **arg_arr, int arg_cnt)
     // local built-in
     else if (strcmp(arg_arr[0], "local") == 0)
     {
-        if(arg_cnt == 1)
+        if (arg_cnt == 1)
         {
-            return_code =-1;
+            return_code = -1;
             return;
         }
 
@@ -1460,7 +1464,7 @@ int main(int argc, char *argv[])
             if (arg_cnt == 0)
             {
                 return_code = 0;
-                //continue;
+                // continue;
             }
             else
             {
@@ -1600,14 +1604,12 @@ int main(int argc, char *argv[])
             if (arg_cnt == 0)
             {
                 return_code = 0;
-                //continue;
+                // continue;
             }
             else
             {
                 solve(arg_arr3, arg_cnt);
             }
-            
-            
 
             // ################################ Release Memory ####################################
 
