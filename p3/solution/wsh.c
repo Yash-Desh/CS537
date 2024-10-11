@@ -376,7 +376,7 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
         }
     }
 
-    // if word NOT found then sub_flag=0
+    // if sub_flag=0, no $ sign encountered
     if (sub_flag == 1)
     {
         // create a new string & copy all the tokens with space delimiter
