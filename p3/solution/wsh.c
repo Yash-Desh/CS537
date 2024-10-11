@@ -440,18 +440,23 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
 
     // copy the number into num_strg
     // get its integer format
+    // i is the iterator that will tell whether [n]>word : n is a numerical value
+    int i=0;
     if (pos > 0)
     {
-        for (int i = 0; i < pos; i++)
+        
+        for (i = 0; i < pos; i++)
         {
+            num_strg[i] = temp[i];
             if (!(temp[i] >= '0' && temp[i] < '9'))
             {
-                return_code = -1;
-                free(temp);
-                temp = NULL;
-                return 2;
+                // return_code = -1;
+                // free(temp);
+                // temp = NULL;
+                // return 2;
+                break;
             }
-            num_strg[i] = temp[i];
+            
         }
         num_strg[pos] = '\0';
         n = atoi(num_strg);
@@ -493,6 +498,14 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
                 temp = NULL;
                 return 2;
             }
+            else if(i != pos)
+            {
+                // n is not a numerical value
+                return_code = -1;
+                free(temp);
+                temp = NULL;
+                return 2;
+            }
             dup2(file_desc, fd);
         }
 
@@ -513,6 +526,13 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             if (file_desc == -1)
             {
                 // failed to open file
+                free(temp);
+                temp = NULL;
+                return 2;
+            }
+            else if(i != pos)
+            {
+                return_code = -1;
                 free(temp);
                 temp = NULL;
                 return 2;
@@ -561,6 +581,13 @@ int redirection(int caller, char **arg_arr, int arg_cnt)
             if (file_desc == -1)
             {
                 // file opening failed
+                free(temp);
+                temp = NULL;
+                return 2;
+            }
+            else if(i != pos)
+            {
+                return_code = -1;
                 free(temp);
                 temp = NULL;
                 return 2;
