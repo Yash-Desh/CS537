@@ -1,1 +1,7 @@
-hello
+THIS IS ERROR
+Enter number : You entered : 9
+Enter number : You entered : 8
+Enter number : You entered : 7
+Enter number : You entered : 6
+Enter number : You entered : 5
+Sum = 35

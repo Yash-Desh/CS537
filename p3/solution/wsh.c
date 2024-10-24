@@ -185,7 +185,7 @@ void change_history_size(char *n)
 void record_history(char *arg, char *firstarg)
 {
     // debug
-    // printf("In record_history str is: %s\n", arg);
+    // Don't record history if command is built-in/previous command
     if (!strcmp(firstarg, "history") ||
         !strcmp(firstarg, "exit") ||
         !strcmp(firstarg, "cd") ||
@@ -217,7 +217,9 @@ void record_history(char *arg, char *firstarg)
     }
     else // case History Not Empty
     {
+        // Add new command to the top of linked list
         temp->next = Hfirst;
+        // change the head node
         Hfirst = temp;
     }
     Hcnt++;
@@ -381,6 +383,14 @@ char *variable_sub(char **arg_arr, int arg_cnt, char *str)
     {
         // create a new string & copy all the tokens with space delimiter
         char *modified = (char *)malloc(MAXLINE * sizeof(char));
+
+        // handle malloc failed to allocate memory
+        // if(modified == NULL)
+        // {
+        //      // malloc failed, set return_code
+        //      return_code = -1;        
+        //      return str;
+        // }
 
         // redundant checks incase variable substitution fails
         if (arg_arr[0][0] != '$')
@@ -922,11 +932,13 @@ void solve(char **arg_arr, int arg_cnt)
     {
         if (arg_cnt == 1)
         {
+            // case command = export
+            // i.e no parameters given to export 
             return_code = -1;
             return;
         }
 
-        // Having a dollar sign on the left side is an error, e.g. local $a=b
+        // Having a dollar sign on the left side is an error, e.g. export $a=b
         if (arg_arr[1][0] == '$')
         {
             return_code = -1;
@@ -991,6 +1003,8 @@ void solve(char **arg_arr, int arg_cnt)
     {
         if (arg_cnt == 1)
         {
+            // case command = local
+            // i.e. no parameters given to local
             return_code = -1;
             return;
         }
@@ -1072,7 +1086,7 @@ void solve(char **arg_arr, int arg_cnt)
     // vars built-n
     else if (strcmp(arg_arr[0], "vars") == 0)
     {
-        // printf("Entered vars condition\n");
+        // redirection in vars
         if (arg_cnt == 2)
         {
             int saved_stdin = dup(0);
@@ -1130,6 +1144,7 @@ void solve(char **arg_arr, int arg_cnt)
             {
                 change_history_size(arg_arr[2]);
             }
+            // redirection in history set [n] command
             else if (arg_cnt == 4)
             {
                 int saved_stdin = dup(0);
@@ -1155,6 +1170,7 @@ void solve(char **arg_arr, int arg_cnt)
                 close(saved_stderr);
             }
         }
+        // redirection in history
         else if (arg_cnt == 2)
         {
             int saved_stdin = dup(0);
@@ -1196,6 +1212,7 @@ void solve(char **arg_arr, int arg_cnt)
     {
         if (arg_cnt == 2)
         {
+            // redirection in ls
             int saved_stdin = dup(0);
             int saved_stdout = dup(1);
             int saved_stderr = dup(2);
@@ -1449,6 +1466,7 @@ int main(int argc, char *argv[])
 
             // ################### handle variable substitution ######################
 
+            // Tokenise the history-replaced input
             char *str2 = NULL;
             char *arg_arr2[MAXARGS] = {NULL};
             if (used_history == 1)
