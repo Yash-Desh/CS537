@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "wsh.h": "c",
-        "dirent.h": "c",
-        "stdlib.h": "c"
-    }
-}
