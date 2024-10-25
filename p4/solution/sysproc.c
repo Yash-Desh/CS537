@@ -89,3 +89,20 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// settickets()
+int sys_settickets(void)
+{
+  return 1;
+}
+// getpinfo()
+int sys_getpinfo(void)
+{
+  return 1;
+}
+
+// hello
+int sys_hello(void)
+{
+  return myproc()->pid;
+}

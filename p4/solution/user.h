@@ -1,6 +1,9 @@
 struct stat;
 struct rtcdate;
 
+// create an instance of struct pstat
+struct pstat;
+
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
@@ -23,6 +26,17 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+
+// user-level definition of settickets() system-call
+int settickets(int n);
+
+// user-level definition of getpinfo() system-call
+int getpinfo(struct pstat*);
+
+
+// user-level definition of hello() system call
+int hello(void);
+
 
 // ulib.c
 int stat(const char*, struct stat*);

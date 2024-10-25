@@ -188,3 +188,10 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+
+// global variables for the stride scheduler
+#define   STRIDE1 1<<10
+extern int      global_tickets;
+extern int      global_pass;
+extern int      glbal_stride;
