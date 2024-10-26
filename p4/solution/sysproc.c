@@ -93,6 +93,41 @@ sys_uptime(void)
 // settickets()
 int sys_settickets(void)
 {
+  int tickets_new;
+
+  // Check if these arguments are present & within allocated address
+  // space
+  if(argint(0, &tickets_new)<0)
+  {
+    return -1;
+  }
+
+  // decrement global_tickets
+  global_tickets -= myproc()->tickets;
+
+  if(tickets_new <= 0 || tickets_new > 32)
+  {
+    myproc()->tickets = 8;
+  }
+  else
+  {
+    myproc()->tickets = tickets_new;
+  }
+
+  // calculate stride
+  int stride_new = STRIDE1/myproc()->tickets;
+
+  // update remain
+  myproc()->remain = (stride_new/myproc()->stride)*myproc()->remain;
+  // update stride
+  myproc()->stride = stride_new; 
+
+  // increment global_tickets
+  global_tickets += myproc()->tickets;
+
+  // update global_stride
+  global_stride = STRIDE1/global_tickets;
+  
   return 1;
 }
 // getpinfo()
@@ -104,5 +139,5 @@ int sys_getpinfo(void)
 // hello
 int sys_hello(void)
 {
-  return myproc()->pid;
+  return myproc()->tickets;
 }
