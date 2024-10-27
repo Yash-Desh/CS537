@@ -14,6 +14,11 @@ extern char end[]; // first address after kernel loaded from ELF file
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
 // doing some setup required for memory allocator to work.
+
+int global_tickets = 0;
+int global_stride = 0;
+int global_pass = 0;
+
 int
 main(void)
 {

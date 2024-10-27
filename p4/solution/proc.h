@@ -51,12 +51,12 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   // Task-1 : Add appropriate fields in proc struct
-  // int tickets;
-  // int strid;
-  // int pass;
-  // int remain;
+  int tickets;
+  int stride;
+  int pass;
+  int remain;
   // number of ticks a process has been running for
-  int proc_tick;
+  int rtime;
 };
 
 // Process memory is laid out contiguously, low addresses first:

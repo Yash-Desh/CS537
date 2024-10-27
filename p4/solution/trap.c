@@ -51,9 +51,28 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      // cprintf("global ticks %d\n",ticks);
+
+      
+      // if(myproc() && myproc()->state == RUNNING)
+      // {
+      //     // increment running process ticks
+      //     myproc()->rtime++;
+          
+      //     // cprintf("process with pid %d ran for %d ticks \n",myproc()->pid, myproc()->rtime);
+      //     // increment running process pass value
+      //     // myproc()->pass += myproc()->stride;
+          
+      //     global_pass += global_stride;
+      // }
+      update();
+
       wakeup(&ticks);
       release(&tickslock);
     }
+  // modify for ticks
+  // myproc()->rtime++;
+
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:
@@ -104,7 +123,11 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
-    yield();
+    {
+      //cprintf("yield called\n");
+      //myproc()->rtime++;
+      yield();
+    }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

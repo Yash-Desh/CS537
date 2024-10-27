@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "pstat.h"
 
 struct {
   struct spinlock lock;
@@ -89,8 +90,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
-  // mod
-  p->proc_tick=0;
+  
 
   release(&ptable.lock);
 
@@ -114,6 +114,28 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
+  // initialize tick-counter to 0
+  p->rtime=0;
+
+  // default value of tickets for a newly created process
+  p->tickets=8;
+
+  // define process stride
+  p->stride = STRIDE1/p->tickets;
+
+  // define pass as global pass at process creation
+  p->pass = global_pass;
+
+  // update global_tickets
+  global_tickets += p->tickets;
+
+  // update global_stride
+  global_stride = STRIDE1/global_tickets;
+
+  cprintf("tickets=%d\nstride=%d\npass=%d\nglobal_tickets=%d\nglobal_stride=%d\n",
+  p->tickets, p->stride, p->pass, global_tickets, global_stride);
+
 
   return p;
 }
@@ -219,6 +241,7 @@ fork(void)
 
   np->state = RUNNABLE;
 
+  
   release(&ptable.lock);
 
   return pid;
@@ -254,6 +277,7 @@ exit(void)
 
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
+  //cprintf("wake up failed %s is parent\n", curproc->parent->name);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -265,8 +289,10 @@ exit(void)
   }
 
   // Jump into the scheduler, never to return.
+  //cprintf("zombie process\n");
   curproc->state = ZOMBIE;
   sched();
+  
   panic("zombie exit");
 }
 
@@ -278,7 +304,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+  cprintf("inside wait\n");
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -311,6 +337,7 @@ wait(void)
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+    //cprintf("%s waiting now\n", curproc->name);
   }
 }
 
@@ -323,12 +350,18 @@ wait(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 #ifdef RR
+  // Handle round robin scheduler
 void
 scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
+  // initialize the global variables
+  // int global_tickets = 0;
+  // int global_stride = 0;
+  // int global_pass = 0;
   
   for(;;){
     // Enable interrupts on this processor.
@@ -346,8 +379,15 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      p->proc_tick++;
-      cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->proc_tick);
+
+      // p->rtime++;
+      // increment running process pass value
+      //p->pass += p->stride;
+
+      // increment global pass
+      // global_pass += global_stride;
+      
+      // cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->rtime);
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -359,36 +399,130 @@ scheduler(void)
 
   }
 }
-#endif
 
-#ifdef STRIDE
+
+#elif defined(STRIDE)
+  // Handle stride scheduler
 void
 scheduler(void)
 {
+  // cprintf("inside stride scheduler\n");
+
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
+
+  int min_pass = INT_MAX;
+  // pointer to the next process to run
+  struct proc *temp=0;
+
+  // initialize the global variables
+  // int global_tickets = 0;
+  // int global_stride = 0;
+  //  int global_pass = 0;
   
-  for(;;){
+  for(;;)
+  {
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
 
+    // redefine the value of min_pass for each run of linear search
+    min_pass = INT_MAX;
+    
+    // linear search for min pass value
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+       if(p->state == RUNNABLE)
+       {
+         // min_pass = p->pass;
+          // select p
+          if(p->pass < min_pass)
+          {
+            min_pass = p->pass;
+            temp = p;
+          }
+          else if(p->pass == min_pass)
+          {
+            // tie breaking
+
+            // tick time is less
+            if(p->rtime < temp->rtime)
+            {
+              temp = p;
+            }
+
+            // if tick time matchs
+            else if(p->rtime == temp->rtime)
+            {
+                if(p->pid < temp->pid)
+                {
+                  temp = p;
+                }
+            }
+          }
+       }
+    } 
+      //  else if(p->state == RUNNABLE && p->pass == min_pass)
+      //  {
+      //    // tie breaking
+
+      //    // tick time is less
+      //    if(p->rtime < temp->rtime)
+      //    {
+      //      temp = p;
+      //    }
+
+      //    // if tick time matchs
+      //    else if(p->rtime == temp->rtime)
+      //    {
+      //       if(p->pid < temp->pid)
+      //       {
+      //         temp = p;
+      //       }
+      //       else 
+      //       {
+      //         continue;
+      //       }
+      //    }
+      //    else
+      //    {
+      //      continue;
+      //    }
+      //  }
+      //  else
+      //  {
+      //    continue;
+      //  }
+    // }
+    if(temp)
+    {
+      // cprintf("inside scheduler if\n");
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      p=temp;
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      p->proc_tick++;
-      cprintf("inside stride scheduler\n");
-      cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->proc_tick);
+
+
+      // is this correct ?
+      // p->rtime++;
+      
+
+      // increment running process pass value
+      // p->pass += p->stride;
+      //cprintf("pass of this process %d\n", p->pass);
+      // increment global pass
+      // global_pass += global_stride;
+
+      //cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->rtime);
       swtch(&(c->scheduler), p->context);
+      //cprintf("after swtch\n");
       switchkvm();
 
       // Process is done running for now.
@@ -399,6 +533,8 @@ scheduler(void)
 
   }
 }
+#else
+  // Error, undefined scheduler
 #endif
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -425,6 +561,7 @@ sched(void)
   intena = mycpu()->intena;
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
+  // cprintf("sched failed\n");
 }
 
 // Give up the CPU for one scheduling round.
@@ -481,9 +618,32 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+
+  // update values before going to sleep
+  if(p->state != SLEEPING)
+  {
+    // modify remain value
+    p->remain = p->pass - global_pass;
+
+    // decrement global_tickets
+    // global_tickets -= p->tickets;
+
+    // // update global_stride
+    // if(global_tickets != 0)
+    // {
+    //   global_stride = STRIDE1/global_tickets;
+    // }
+    // else
+    // {
+    //   global_stride = 0;
+    // }
+  }
+
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+
+  
 
   sched();
 
@@ -503,11 +663,33 @@ sleep(void *chan, struct spinlock *lk)
 static void
 wakeup1(void *chan)
 {
+  // cprintf("Inside wakeup1\n");
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
     if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+      {
+        p->state = RUNNABLE;
+        
+        // update pass
+        p->pass = p->remain + global_pass;
+
+        // increments global_tickets
+        //global_tickets += p->tickets;
+
+        // // update global_stride
+        // // update global_stride
+        // if(global_tickets != 0)
+        // {
+        //   global_stride = STRIDE1/global_tickets;
+        // }
+        // else
+        // {
+        //   global_stride = 0;
+        }
+      
+  }
 }
 
 // Wake up all processes sleeping on chan.
@@ -577,4 +759,81 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+
+// function to populate pstat in getpinfo system call
+void pinfo (struct pstat *ptr)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+  int i=0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == UNUSED)
+    {
+      ptr->inuse[i] = 0;
+      ptr->tickets[i] = 0;
+      ptr->pid[i] = 0;
+      ptr->pass[i] = 0;
+      ptr->remain[i] = 0;
+      ptr->stride[i] = 0;
+      ptr->rtime[i] = 0;
+    }
+    else
+    {
+      ptr->inuse[i] = 1;
+      ptr->tickets[i] = p->tickets;
+      ptr->pid[i] = p->pid;
+      ptr->pass[i] = p->pass;
+      ptr->remain[i] = p->remain;
+      ptr->stride[i] = p->stride;
+      ptr->rtime[i] = p->rtime;
+    }
+    i++;
+  }
+  release(&ptable.lock);
+}
+
+
+
+// function to update variables at every tick
+void update (void)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  global_tickets=0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    // modifications for the running process
+    if(p->state == RUNNING)
+    {
+      // increment run-time
+      p->rtime++;
+
+      // increment pass value
+      p->pass += p->stride;
+
+    }
+
+    // calculate the global_tickets
+    if(p->state == RUNNABLE || p->state == RUNNING)
+    {
+      global_tickets += p->tickets;
+    }
+  }
+  // calculate global_stride
+  if(global_tickets == 0)
+  {
+    global_stride = 0;
+  }
+  else 
+  {
+    global_stride = STRIDE1/global_tickets;
+  }
+
+  // increment global_pass
+  global_pass += global_stride;
+  release(&ptable.lock);
 }

@@ -9,6 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct pstat;
 
 // bio.c
 void            binit(void);
@@ -121,6 +122,12 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 
+// for systemcall getpinfo
+void            pinfo(struct pstat*);
+
+// to update variables after every tick
+void            update(void);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 
@@ -191,7 +198,8 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 
 // global variables for the stride scheduler
-#define   STRIDE1 1<<10
+#define   STRIDE1 1024
+#define   INT_MAX 2147483647
 extern int      global_tickets;
 extern int      global_pass;
-extern int      glbal_stride;
+extern int      global_stride;

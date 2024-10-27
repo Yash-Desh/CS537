@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "pstat.h"
 
 int
 sys_fork(void)
@@ -128,12 +129,25 @@ int sys_settickets(void)
   // update global_stride
   global_stride = STRIDE1/global_tickets;
   
-  return 1;
+  return 0;
 }
 // getpinfo()
 int sys_getpinfo(void)
 {
-  return 1;
+  // pointer for the struct argument
+  struct pstat *ptr;
+
+  // check if argument are present & within allocated 
+  // address space
+  if(argptr(0, (void*)&ptr, sizeof(*ptr)) < 0)
+  {
+    return -1;
+  }
+
+  // call pinfo
+  pinfo(ptr);
+
+  return 0;
 }
 
 // hello
