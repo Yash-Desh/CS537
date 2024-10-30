@@ -128,10 +128,10 @@ found:
   p->pass = global_pass;
 
   // update global_tickets
-  global_tickets += p->tickets;
+  // global_tickets += p->tickets;
 
   // update global_stride
-  global_stride = STRIDE1/global_tickets;
+  // global_stride = STRIDE1/global_tickets;
 
   cprintf("tickets=%d\nstride=%d\npass=%d\nglobal_tickets=%d\nglobal_stride=%d\n",
   p->tickets, p->stride, p->pass, global_tickets, global_stride);
@@ -304,7 +304,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  cprintf("inside wait\n");
+  // cprintf("inside wait\n");
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -369,10 +369,12 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    // cprintf("this is a sched\n");
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-
+      // cprintf("sched\n");
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -387,9 +389,15 @@ scheduler(void)
       // increment global pass
       // global_pass += global_stride;
       
-      // cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->rtime);
+      //cprintf("About to run %s[pid %d] for %d tick\n", c->proc->name, c->proc->pid, c->proc->rtime);
       swtch(&(c->scheduler), p->context);
       switchkvm();
+      //p->pass += p->stride;
+      //cprintf("Back from swtch\n");
+      // cprintf("completed scheduling %s [%d]\n", p->name, p->state);
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      // c->proc = 0;  switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -415,7 +423,7 @@ scheduler(void)
 
   int min_pass = INT_MAX;
   // pointer to the next process to run
-  struct proc *temp=0;
+  // struct proc *temp=0;
 
   // initialize the global variables
   // int global_tickets = 0;
@@ -429,9 +437,12 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    //cprintf("this is a sched\n");
+
 
     // redefine the value of min_pass for each run of linear search
     min_pass = INT_MAX;
+    struct proc *temp=0;
     
     // linear search for min pass value
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -466,38 +477,8 @@ scheduler(void)
           }
        }
     } 
-      //  else if(p->state == RUNNABLE && p->pass == min_pass)
-      //  {
-      //    // tie breaking
-
-      //    // tick time is less
-      //    if(p->rtime < temp->rtime)
-      //    {
-      //      temp = p;
-      //    }
-
-      //    // if tick time matchs
-      //    else if(p->rtime == temp->rtime)
-      //    {
-      //       if(p->pid < temp->pid)
-      //       {
-      //         temp = p;
-      //       }
-      //       else 
-      //       {
-      //         continue;
-      //       }
-      //    }
-      //    else
-      //    {
-      //      continue;
-      //    }
-      //  }
-      //  else
-      //  {
-      //    continue;
-      //  }
-    // }
+      
+    // if   
     if(temp)
     {
       // cprintf("inside scheduler if\n");
@@ -520,10 +501,12 @@ scheduler(void)
       // increment global pass
       // global_pass += global_stride;
 
-      //cprintf("About to run %s[pid %d] for %d ticks\n", c->proc->name, c->proc->pid, c->proc->rtime);
+      // cprintf("About to run %s[pid %d] for %d tick\n", c->proc->name, c->proc->pid, c->proc->rtime);
       swtch(&(c->scheduler), p->context);
       //cprintf("after swtch\n");
       switchkvm();
+
+      p->pass += p->stride;
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -570,6 +553,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
+  //cprintf("yield\n");
   sched();
   release(&ptable.lock);
 }
@@ -811,9 +795,11 @@ void update (void)
     {
       // increment run-time
       p->rtime++;
+      //cprintf("process PID[%d] state = %d rtime = %d\n", p->pid, p->state, p->rtime);
 
       // increment pass value
-      p->pass += p->stride;
+      //place this in the scheduler
+      // p->pass += p->stride;
 
     }
 
