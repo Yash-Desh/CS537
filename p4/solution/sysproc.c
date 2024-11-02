@@ -144,6 +144,13 @@ int sys_getpinfo(void)
     return -1;
   }
 
+  // Null pointer handled
+  if(ptr==0)
+  {
+    return -1;
+  }
+
+
   // call pinfo
   pinfo(ptr);
 

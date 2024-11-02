@@ -133,8 +133,8 @@ found:
   // update global_stride
   // global_stride = STRIDE1/global_tickets;
 
-  cprintf("tickets=%d\nstride=%d\npass=%d\nglobal_tickets=%d\nglobal_stride=%d\n",
-  p->tickets, p->stride, p->pass, global_tickets, global_stride);
+  // cprintf("tickets=%d\nstride=%d\npass=%d\nglobal_tickets=%d\nglobal_stride=%d\n",
+  // p->tickets, p->stride, p->pass, global_tickets, global_stride);
 
 
   return p;
@@ -518,6 +518,7 @@ scheduler(void)
 }
 #else
   // Error, undefined scheduler
+  
 #endif
 
 // Enter scheduler.  Must hold only ptable.lock

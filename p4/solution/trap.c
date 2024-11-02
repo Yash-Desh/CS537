@@ -53,7 +53,7 @@ trap(struct trapframe *tf)
       ticks++;
       // cprintf("global ticks %d\n",ticks);
 
-      
+      // cprintf("tick\n");
       // if(myproc() && myproc()->state == RUNNING)
       // {
       //     // increment running process ticks
