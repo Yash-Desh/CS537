@@ -128,10 +128,10 @@ found:
   p->pass = global_pass;
 
   // update global_tickets
-  // global_tickets += p->tickets;
+  global_tickets += p->tickets;
 
   // update global_stride
-  // global_stride = STRIDE1/global_tickets;
+  global_stride = STRIDE1/global_tickets;
 
   // cprintf("tickets=%d\nstride=%d\npass=%d\nglobal_tickets=%d\nglobal_stride=%d\n",
   // p->tickets, p->stride, p->pass, global_tickets, global_stride);
@@ -501,13 +501,13 @@ scheduler(void)
       // increment global pass
       // global_pass += global_stride;
 
-      // cprintf("About to run %s[pid %d] for %d tick\n", c->proc->name, c->proc->pid, c->proc->rtime);
+      // cprintf("About to run [pid %d] for %d tick\n", c->proc->pid, c->proc->rtime);
       swtch(&(c->scheduler), p->context);
       //cprintf("after swtch\n");
       switchkvm();
 
       p->pass += p->stride;
-
+      // cprintf("[PID %d] pass = %d\n", p->pid, p->pass);
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
@@ -516,7 +516,7 @@ scheduler(void)
 
   }
 }
-#else
+// #else
   // Error, undefined scheduler
   
 #endif
@@ -567,7 +567,7 @@ forkret(void)
   static int first = 1;
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
-
+  // cprintf("forkret called\n");
   if (first) {
     // Some initialization functions must be run in the context
     // of a regular process (e.g., they call sleep), and thus cannot
@@ -609,7 +609,10 @@ sleep(void *chan, struct spinlock *lk)
   {
     // modify remain value
     p->remain = p->pass - global_pass;
-
+    //p->rtime++;
+    // global_pass += global_stride;
+    // cprintf("[PID %d] put to sleep\n", p->pid);;
+    // update();
     // decrement global_tickets
     // global_tickets -= p->tickets;
 
@@ -659,6 +662,8 @@ wakeup1(void *chan)
         
         // update pass
         p->pass = p->remain + global_pass;
+
+        // cprintf("[PID %d] woken up\n", p->pid);
 
         // increments global_tickets
         //global_tickets += p->tickets;

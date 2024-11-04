@@ -106,9 +106,14 @@ int sys_settickets(void)
   // decrement global_tickets
   global_tickets -= myproc()->tickets;
 
-  if(tickets_new <= 0 || tickets_new > 32)
+  if(tickets_new < 1)
   {
     myproc()->tickets = 8;
+  }
+
+  else if(tickets_new > 32)
+  {
+    myproc()->tickets = 32;
   }
   else
   {

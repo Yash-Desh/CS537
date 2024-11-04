@@ -7,7 +7,7 @@ int main(void)
 {
   printf(1, "The process ID is: %d\n", getpid());
   printf(1, "The process tickets are: %d\n", hello());
-  settickets(-3);
+  settickets(30);
   printf(1, "The process tickets are: %d\n", hello());
 
   struct pstat ps;

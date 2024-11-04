@@ -51,7 +51,7 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
-      // cprintf("global ticks %d\n",ticks);
+      // cprintf("ticks = %d\n",ticks);
 
       // cprintf("tick\n");
       // if(myproc() && myproc()->state == RUNNING)
