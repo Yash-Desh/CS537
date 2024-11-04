@@ -255,3 +255,28 @@ slipdays.txt # optional
 - ["Stride Scheduling: Deterministic Proportional-Share Resource Management" by Carl A. Waldspurger and William E. Weihl. Technical Memo MIT/LCS/TM-528, MIT Laboratory for Computer Science, June 1995.](https://dl.acm.org/action/downloadSupplement?doi=10.5555%2F889650&file=mit___artificial_intelligence_laboratory_tm-528.ps)
 - [OSTEP Chapter 9: Scheduling: Proportional Share.](https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched-lottery.pdf)
 Discusses concepts related to proportional-share scheduling algorithms.
+
+
+
+### Task-6 Answer
+
+1. Round Robin Scheduler gives all the processes that enter at the same time equal opportunity to run
+Hence we see that irrespective of the number of tickets each process is assigned, they all have the same 
+runtime.
+
+2. On the otherhand, stride scheduler prioritizes fairness measured in terms of number of tickets assigned 
+to the process.
+
+It prioritizes processes with more tickets, leading to a fairer distribution and predictable runtimes.
+
+3. Advantage of stride scheduling is deterministic runtimes prioritizing fairness in terms of assigned tickets
+
+Considering the last entry in `stride_process_stats.csv`
+1. ignoring the 1st 5 processes
+2. processes with tickets=32 that entered at the beginning have a runtime of 816
+3. process with tickets=16 that entered at the beginning has a runtime of 409 which is roughly half
+4. process with tickets=8 that entered at the beginning has a runtime of 205 which is roughly half
+5. process with tickets=4 that entered at the beginning has a runtime of 103 which is roughly half
+6. process with tickets=2 that entered at the beginning has a runtime of 52 which is roughly half
+
+while the same entries in `rr__process_stats.csv` have a runtime of 4122 which is the same for all processes

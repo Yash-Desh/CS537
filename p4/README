@@ -1,0 +1,20 @@
+1. Round Robin Scheduler gives all the processes that enter at the same time equal opportunity to run
+Hence we see that irrespective of the number of tickets each process is assigned, they all have the same 
+runtime.
+
+2. On the otherhand, stride scheduler prioritizes fairness measured in terms of number of tickets assigned 
+to the process.
+
+It prioritizes processes with more tickets, leading to a fairer distribution and predictable runtimes.
+
+3. Advantage of stride scheduling is deterministic runtimes prioritizing fairness in terms of assigned tickets
+
+Considering the last entry in stride_process_stats.csv
+1. ignoring the 1st 5 processes
+2. processes with tickets=32 that entered at the beginning have a runtime of 816
+3. process with tickets=16 that entered at the beginning has a runtime of 409 which is roughly half
+4. process with tickets=8 that entered at the beginning has a runtime of 205 which is roughly half
+5. process with tickets=4 that entered at the beginning has a runtime of 103 which is roughly half
+6. process with tickets=2 that entered at the beginning has a runtime of 52 which is roughly half
+
+while the same entries in rr__process_stats.csv have a runtime of 4122 which is the same for all processes

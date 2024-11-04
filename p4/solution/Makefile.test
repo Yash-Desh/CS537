@@ -189,6 +189,7 @@ UPROGS=\
 	_test_5\
 	_test_6\
 	_test_7\
+	_test_8\
 	_mkdir\
 	_rm\
 	_sh\
@@ -197,7 +198,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_workload\
-	_test\
+	
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

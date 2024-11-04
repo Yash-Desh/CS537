@@ -12,32 +12,15 @@ main(int argc, char* argv[])
     int pa_tickets = 8;
     ASSERT(settickets(pa_tickets) != -1, "settickets syscall failed in parent");
 
-    // #################### parent runs for 40 ticks ####################
 
-    // check parent stats
-    int my_idx = find_my_stats_index(&ps);
-    ASSERT(my_idx != -1, "Could not get process stats from pgetinfo");
-
-    ASSERT(ps.tickets[my_idx] == pa_tickets, "Parent tickets should be set to %d, \
-but got %d from pgetinfo", pa_tickets, ps.tickets[my_idx]);
-
-
-    int old_rtime = ps.rtime[my_idx];
-    int old_pass = ps.pass[my_idx];
-
-
-    // run parent for 40 ticks
-    int extra = 40;
-    run_until(old_rtime + extra);
-
-    // #################### child created ####################
-    
+    // ######################### child created #########################
     int pid = fork();
 
-    // Child has the same number of tickets of the parent (default = 8)
+    // Child has the same number tickets of the parent (default = 8)
     int ch_tickets = 8;
 
     if (pid == 0) {
+        
         // This just has to be large enough that we know it doesn't terminate
         // before the parent gets some information - note that they should 
         // run proportional to their tickets, so it's not completely random
@@ -47,7 +30,11 @@ but got %d from pgetinfo", pa_tickets, ps.tickets[my_idx]);
         exit();
     }
 
-    my_idx = find_my_stats_index(&ps);
+
+    // parent sleeps for 40 time ticks
+    sleep(40);
+
+    int my_idx = find_my_stats_index(&ps);
     ASSERT(my_idx != -1, "Could not get process stats from pgetinfo");
     int ch_idx = find_stats_index_for_pid(&ps, pid);
     ASSERT(ch_idx != -1, "Could not get child process stats from pgetinfo");
@@ -57,14 +44,13 @@ but got %d from pgetinfo", pa_tickets, ps.tickets[my_idx]);
     ASSERT(ps.tickets[ch_idx] == ch_tickets, "Child tickets should be set to %d, \
 but got %d from pgetinfo", ch_tickets, ps.tickets[ch_idx]);
 
-    old_rtime = ps.rtime[my_idx];
-    old_pass = ps.pass[my_idx];
+    int old_rtime = ps.rtime[my_idx];
+    int old_pass = ps.pass[my_idx];
 
     int old_ch_rtime = ps.rtime[ch_idx];
     int old_ch_pass = ps.pass[ch_idx];
     
-    // Run the parent for 40 more ticks
-    extra = 40;
+    int extra = 40;
     run_until(old_rtime + extra);
 
     my_idx = find_my_stats_index(&ps);
@@ -104,13 +90,3 @@ new_pass is %d", old_ch_pass, now_ch_pass);
 
     exit();
 }
-
-
-
-
-
-
-
-
-
-

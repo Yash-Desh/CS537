@@ -609,7 +609,7 @@ sleep(void *chan, struct spinlock *lk)
   {
     // modify remain value
     p->remain = p->pass - global_pass;
-    //p->rtime++;
+    // p->rtime++;
     // global_pass += global_stride;
     // cprintf("[PID %d] put to sleep\n", p->pid);;
     // update();

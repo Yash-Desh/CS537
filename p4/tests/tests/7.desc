@@ -1,0 +1,1 @@
+Check if a child process does not monopolize the CPU in case it joins late
